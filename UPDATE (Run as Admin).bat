@@ -8,4 +8,5 @@ if '%errorlevel%' NEQ '0' (
 
 :: Run the installer
 powershell -ExecutionPolicy Bypass -File "%~dp0install.ps1"
-pause
+
+

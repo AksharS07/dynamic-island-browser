@@ -578,79 +578,94 @@
   // ══════════════════════════════════════════════════════════════
   //  Lyrics  (fetch with XMLHttpRequest – no async/await)
   // ══════════════════════════════════════════════════════════════
-  function fetchLyrics(title, artist, duration) {
+  async function fetchLyrics(title, artist, duration) {
     var key = title + '|' + artist;
     S.lastLyricsKey = key;
     S.lyricsLines   = [];
     S.lyricsIdx     = -1;
     S.lyricsSynced  = false;
-    $('vdi-lyr-btn').style.opacity = '0.3'; $('vdi-lyr-btn').style.pointerEvents = 'none';
+    
+    var btn = document.getElementById('vdi-lyr-btn');
+    if (btn) {
+      btn.classList.add('vdi-loading');
+    }
+    
     lyrPanel.classList.remove('show');
-    $('vdi-lyrics-scroll').innerHTML = '';
+    document.getElementById('vdi-lyrics-scroll').innerHTML = '';
+
+    function stopLoading(success) {
+      if (btn) {
+        btn.classList.remove('vdi-loading');
+        if (success) {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        } else {
+          btn.style.opacity = '0.3';
+          btn.style.pointerEvents = 'none';
+        }
+      }
+    }
+
+    function processData(data) {
+      if (key !== S.lastLyricsKey) return;
+      var lines = [];
+      if (data.syncedLyrics) {
+        S.lyricsSynced = true;
+        var raw = data.syncedLyrics.split('\n');
+        for (var i=0; i<raw.length; i++) {
+          var m = raw[i].match(/\[(\d+):(\d+\.\d+)\](.*)/);
+          if (m) lines.push({ time: parseInt(m[1])*60 + parseFloat(m[2]), text: m[3].trim() });
+        }
+        lines.sort(function(a,b){return a.time-b.time;});
+      } else if (data.plainLyrics) {
+        S.lyricsSynced = false;
+        var plines = data.plainLyrics.split('\n');
+        for (var j=0; j<plines.length; j++) lines.push({ time:0, text:plines[j].trim() });
+      }
+      if (lines.length) {
+        S.lyricsLines = lines;
+        var html = '';
+        for (var k=0; k<lines.length; k++) {
+          var cls = S.lyricsSynced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
+          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
+        }
+        document.getElementById('vdi-lyrics-scroll').innerHTML = html;
+        stopLoading(true);
+      } else {
+        stopLoading(false);
+      }
+    }
 
     try {
-      var params = 'track_name=' + encodeURIComponent(title) +
-                   '&artist_name=' + encodeURIComponent(artist || '');
-      if (duration > 0) params += '&duration=' + Math.round(duration);
+      var cTitle = title.replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\[.*?\]\s*/g, '').trim();
+      var cArtist = (artist || '').split('&')[0].split(',')[0].split(/(?:\s+ft\.|\s+feat\.)/i)[0].trim();
+      var q = encodeURIComponent(cTitle + ' ' + cArtist);
 
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', CFG.lyricsApi + '?' + params, true);
-      xhr.timeout = 5000;
-      xhr.onload = function() {
-        try {
-          if (xhr.status !== 200) return;
-          // Check track still matches
-          if (key !== S.lastLyricsKey) return;
-          var data = JSON.parse(xhr.responseText);
-          var lines = [];
-
-          if (data.syncedLyrics) {
-            S.lyricsSynced = true;
-            var raw = data.syncedLyrics.split('\n');
-            for (var i=0; i<raw.length; i++) {
-              var m = raw[i].match(/\[(\d+):(\d+\.\d+)\](.*)/);
-              if (m) lines.push({ time: parseInt(m[1])*60 + parseFloat(m[2]), text: m[3].trim() });
-            }
-            lines.sort(function(a,b){return a.time-b.time;});
-          } else if (data.plainLyrics) {
-            S.lyricsSynced = false;
-            var plines = data.plainLyrics.split('\n');
-            for (var j=0; j<plines.length; j++) lines.push({ time:0, text:plines[j].trim() });
+      var res = await fetch('https://lrclib.net/api/search?q=' + q, {
+        headers: { 'User-Agent': 'VivaldiDynamicIsland/1.0' }
+      });
+      if (!res.ok) throw new Error('API Error');
+      var arr = await res.json();
+      
+      if (key !== S.lastLyricsKey) return;
+      
+      if (arr && arr.length) {
+        var best = arr[0];
+        for (var i=0; i<arr.length; i++) {
+          if (arr[i].syncedLyrics && Math.abs(arr[i].duration - duration) <= 3) { best = arr[i]; break; }
+        }
+        if (!best.syncedLyrics) {
+          for (var i=0; i<arr.length; i++) {
+            if (arr[i].syncedLyrics) { best = arr[i]; break; }
           }
-
-          if (lines.length) {
-            S.lyricsLines = lines;
-            var html = '';
-            for (var k=0; k<lines.length; k++) {
-              var cls = S.lyricsSynced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
-              html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
-            }
-            $('vdi-lyrics-scroll').innerHTML = html;
-            $('vdi-lyr-btn').style.opacity = '1'; $('vdi-lyr-btn').style.pointerEvents = 'auto';
-            if (S.lyricsOn) lyrPanel.classList.add('show');
-            
-            // Add interactivity to synced lyrics
-            if (S.lyricsSynced) {
-              for (var n=0; n<lines.length; n++) {
-                (function(tTarget) {
-                  var lineEl = $('vdi-lyr-' + n);
-                  if (lineEl) {
-                    lineEl.addEventListener('click', function(e) {
-                      e.stopPropagation();
-                      S.position = tTarget;
-                      refreshProgress();
-                      sendAction('seek', tTarget);
-                    });
-                  }
-                })(lines[n].time);
-              }
-            }
-          }
-        } catch(e) {}
-      };
-      xhr.onerror = xhr.ontimeout = function() {};
-      xhr.send();
-    } catch(e) {}
+        }
+        processData(best);
+      } else {
+        stopLoading(false);
+      }
+    } catch(e) {
+      if (key === S.lastLyricsKey) stopLoading(false);
+    }
   }
 
   function syncLyrics() {
@@ -774,6 +789,7 @@
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
+
 
 
 

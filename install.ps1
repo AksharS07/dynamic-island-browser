@@ -29,6 +29,10 @@ if (-not $VivaldiPath -or -not (Test-Path $VivaldiPath)) {
     exit 1
 }
 
+Write-Host "Killing Vivaldi..." -ForegroundColor Cyan
+Stop-Process -Name vivaldi -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
+
 # --- Find latest version folder -----------------------------
 $versionFolder = Get-ChildItem $VivaldiPath -Directory |
     Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
@@ -97,3 +101,7 @@ Write-Host "[OK] Installation complete! Restart Vivaldi to activate the Dynamic 
 Write-Host ""
 Write-Host "     Hover the pill at the top-center of the browser window" -ForegroundColor Gray
 Write-Host "     whenever media is playing to expand the controls." -ForegroundColor Gray
+
+Write-Host "Relaunching Vivaldi..." -ForegroundColor Cyan
+Start-Process -FilePath "\vivaldi.exe"
+
