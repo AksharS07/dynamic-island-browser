@@ -103,5 +103,6 @@ Write-Host "     Hover the pill at the top-center of the browser window" -Foregr
 Write-Host "     whenever media is playing to expand the controls." -ForegroundColor Gray
 
 Write-Host "Relaunching Vivaldi..." -ForegroundColor Cyan
-Start-Process -FilePath "\vivaldi.exe"
+Start-Process -FilePath "explorer.exe" -ArgumentList ""\vivaldi.exe""
+
 
