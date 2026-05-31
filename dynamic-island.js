@@ -126,7 +126,7 @@
       'transition:background .2s,color .2s,transform .15s;}',
     '.vdi-icon-btn:hover{background:rgba(255,255,255,.15);color:#fff;transform:scale(1.08);}',
     '.vdi-icon-btn.active{color:var(--vdi-accent,' + CFG.defaultAccent + ');}',
-      '@keyframes vdi-pulse{0%{opacity:0.3;}50%{opacity:0.8;}100%{opacity:0.3;}}',
+      '@keyframes vdi-pulse{0%{opacity:0.3 !important;}50%{opacity:1 !important;}100%{opacity:0.3 !important;}}',
       '.vdi-loading{animation:vdi-pulse 1s infinite;}',
     '.vdi-icon-btn svg{width:15px;height:15px;pointer-events:none;}',
     '#vdi-play{width:40px;height:40px;background:var(--vdi-grad,' + CFG.defaultGradient + ');',
@@ -192,7 +192,7 @@
           '</div>' +
           '<div id="vdi-ctrl-extra">' +
             '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics" style="opacity: 0.3; pointer-events: none;">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -774,6 +774,8 @@
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
+
+
 
 
 
