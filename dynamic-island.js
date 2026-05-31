@@ -582,7 +582,7 @@
     S.lyricsLines   = [];
     S.lyricsIdx     = -1;
     S.lyricsSynced  = false;
-    vdi-lyr-btn.style.opacity = '0.3'; vdi-lyr-btn.style.pointerEvents = 'none';
+    $('vdi-lyr-btn').style.opacity = '0.3'; $('vdi-lyr-btn').style.pointerEvents = 'none';
     lyrPanel.classList.remove('show');
     $('vdi-lyrics-scroll').innerHTML = '';
 
@@ -624,7 +624,7 @@
               html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
             }
             $('vdi-lyrics-scroll').innerHTML = html;
-            vdi-lyr-btn.style.opacity = '1'; vdi-lyr-btn.style.pointerEvents = 'auto';
+            $('vdi-lyr-btn').style.opacity = '1'; $('vdi-lyr-btn').style.pointerEvents = 'auto';
             if (S.lyricsOn) lyrPanel.classList.add('show');
             
             // Add interactivity to synced lyrics
@@ -772,6 +772,8 @@
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
+
+
 
 
 
