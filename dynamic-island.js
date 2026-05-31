@@ -126,6 +126,8 @@
       'transition:background .2s,color .2s,transform .15s;}',
     '.vdi-icon-btn:hover{background:rgba(255,255,255,.15);color:#fff;transform:scale(1.08);}',
     '.vdi-icon-btn.active{color:var(--vdi-accent,' + CFG.defaultAccent + ');}',
+      '@keyframes vdi-pulse{0%{opacity:0.3;}50%{opacity:0.8;}100%{opacity:0.3;}}',
+      '.vdi-loading{animation:vdi-pulse 1s infinite;}',
     '.vdi-icon-btn svg{width:15px;height:15px;pointer-events:none;}',
     '#vdi-play{width:40px;height:40px;background:var(--vdi-grad,' + CFG.defaultGradient + ');',
       'color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.45);',
@@ -772,6 +774,9 @@
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
+
+
+
 
 
 
