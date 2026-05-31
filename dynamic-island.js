@@ -189,7 +189,7 @@
             '<button class="vdi-btn" id="vdi-next" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zM7.66 12.82l5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07c-.57.4-.57 1.24 0 1.64z"/></svg></button>' +
           '</div>' +
           '<div id="vdi-ctrl-extra">' +
-            '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics" style="display:none">' +
+            '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics" style="opacity: 0.3; pointer-events: none;">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>' +
             '</button>' +
           '</div>' +
@@ -582,7 +582,7 @@
     S.lyricsLines   = [];
     S.lyricsIdx     = -1;
     S.lyricsSynced  = false;
-    $('vdi-lyr-btn').style.display = 'none';
+    vdi-lyr-btn.style.opacity = '0.3'; vdi-lyr-btn.style.pointerEvents = 'none';
     lyrPanel.classList.remove('show');
     $('vdi-lyrics-scroll').innerHTML = '';
 
@@ -624,7 +624,7 @@
               html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
             }
             $('vdi-lyrics-scroll').innerHTML = html;
-            $('vdi-lyr-btn').style.display = 'flex';
+            vdi-lyr-btn.style.opacity = '1'; vdi-lyr-btn.style.pointerEvents = 'auto';
             if (S.lyricsOn) lyrPanel.classList.add('show');
             
             // Add interactivity to synced lyrics
@@ -772,6 +772,7 @@
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
+
 
 
 
