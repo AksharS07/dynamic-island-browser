@@ -9,4 +9,5 @@ if '%errorlevel%' NEQ '0' (
 :: Run the installer
 powershell -ExecutionPolicy Bypass -File "%~dp0install.ps1"
 
-
+:: Drop privileges and launch Vivaldi out of its true standalone path
+start explorer.exe "C:\VivaldiBrowser\Application\vivaldi.exe"

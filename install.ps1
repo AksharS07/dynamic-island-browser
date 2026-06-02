@@ -107,13 +107,20 @@ Write-Host "     whenever media is playing to expand the controls." -ForegroundC
 # ══════════════════════════════════════════════════════════════
 Write-Host "Relaunching Vivaldi..." -ForegroundColor Cyan
 
-# Ensure we extract the pure directory or executable path correctly
-if ($vivaldiExe -and (Test-Path $vivaldiExe)) {
-    # Call explorer.exe to spawn Vivaldi under your standard user token
-    Start-Process "explorer.exe" -ArgumentList "`"$vivaldiExe`""
+$targetExe = "C:\VivaldiBrowser\Application\vivaldi.exe"
+
+if (Test-Path $targetExe) {
+    Start-Process "explorer.exe" -ArgumentList "`"$targetExe`""
     Write-Host "Vivaldi successfully launched." -ForegroundColor Green
 } else {
-    Write-Warning "Could not automatically restart Vivaldi. Please open it manually."
+    # Fallback check if the executable lives in the root folder instead
+    $fallbackExe = "C:\VivaldiBrowser\vivaldi.exe"
+    if (Test-Path $fallbackExe) {
+        Start-Process "explorer.exe" -ArgumentList "`"$fallbackExe`""
+        Write-Host "Vivaldi successfully launched." -ForegroundColor Green
+    } else {
+        Write-Warning "Could not find vivaldi.exe at the specified paths. Please launch manually."
+    }
 }
 
 
