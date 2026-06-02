@@ -102,25 +102,11 @@ Write-Host ""
 Write-Host "     Hover the pill at the top-center of the browser window" -ForegroundColor Gray
 Write-Host "     whenever media is playing to expand the controls." -ForegroundColor Gray
 
-# ══════════════════════════════════════════════════════════════
-#  Relaunch Vivaldi (Dropping Admin Privileges)
-# ══════════════════════════════════════════════════════════════
-Write-Host "Relaunching Vivaldi..." -ForegroundColor Cyan
+Write-Host ""
+Write-Host "[OK] Installation complete! Restart Vivaldi to activate the Dynamic Island." -ForegroundColor Green
+Write-Host ""
+Write-Host "     Hover the pill at the top-center of the browser window" -ForegroundColor Gray
+Write-Host "     whenever media is playing to expand the controls." -ForegroundColor Gray
 
-$targetExe = "C:\VivaldiBrowser\Application\vivaldi.exe"
-
-if (Test-Path $targetExe) {
-    Start-Process "explorer.exe" -ArgumentList "`"$targetExe`""
-    Write-Host "Vivaldi successfully launched." -ForegroundColor Green
-} else {
-    # Fallback check if the executable lives in the root folder instead
-    $fallbackExe = "C:\VivaldiBrowser\vivaldi.exe"
-    if (Test-Path $fallbackExe) {
-        Start-Process "explorer.exe" -ArgumentList "`"$fallbackExe`""
-        Write-Host "Vivaldi successfully launched." -ForegroundColor Green
-    } else {
-        Write-Warning "Could not find vivaldi.exe at the specified paths. Please launch manually."
-    }
-}
 
 
