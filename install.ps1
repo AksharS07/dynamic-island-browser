@@ -87,13 +87,13 @@ $content = Get-Content $windowHtml -Raw -Encoding UTF8
 # Build tag as a plain string - no interpolation needed
 $scriptTag = '<script src="dynamic-island.js"></script>'
 
-if ($content.Contains($scriptTag)) {
+if ($content -match [regex]::Escape($scriptTag)) {
     Write-Host "dynamic-island.js already injected in window.html - skipping." -ForegroundColor Yellow
 } else {
-    # Use [string]::Replace to avoid regex substitution quirks
-    $newContent = $content.Replace('</body>', $scriptTag + "`r`n</body>")
+    # UPGRADE: Use Regex to dynamically locate the closing body tag regardless of whitespace
+    $newContent = $content -replace '(?i)<\/body>', "$scriptTag`r`n</body>"
     [System.IO.File]::WriteAllText($windowHtml, $newContent, [System.Text.Encoding]::UTF8)
-    Write-Host "Patched window.html successfully." -ForegroundColor Green
+    Write-Host "Patched window.html successfully with Regex parsing." -ForegroundColor Green
 }
 
 Write-Host ""

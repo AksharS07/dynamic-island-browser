@@ -624,10 +624,19 @@
       }
       if (lines.length) {
         S.lyricsLines = lines;
+        // SECURITY PATCH: Sanitize text to prevent XSS injection
+        function escapeHTML(str) {
+          var div = document.createElement('div');
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
         var html = '';
         for (var k=0; k<lines.length; k++) {
           var cls = S.lyricsSynced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
-          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
+          var timeAttr = S.lyricsSynced ? ' data-time="' + lines[k].time + '"' : '';
+          var safeText = lines[k].text ? escapeHTML(lines[k].text) : '&nbsp;';
+          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '"' + timeAttr + '>' + safeText + '</div>';
         }
         document.getElementById('vdi-lyrics-scroll').innerHTML = html;
         stopLoading(true);
@@ -782,10 +791,19 @@
   // ══════════════════════════════════════════════════════════════
   //  Start
   // ══════════════════════════════════════════════════════════════
+ // ══════════════════════════════════════════════════════════════
+  //  Start (Event-Driven Architecture)
+  // ══════════════════════════════════════════════════════════════
   poll();
-  setInterval(poll, CFG.pollInterval);
+  
+  // Hook into Chromium's native event bus instead of looping a timer
+  if (chrome && chrome.tabs) {
+    chrome.tabs.onUpdated.addListener(poll);
+    chrome.tabs.onActivated.addListener(poll);
+    chrome.tabs.onRemoved.addListener(poll);
+  }
+  
   resetIdle();
-
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
