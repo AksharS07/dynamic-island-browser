@@ -1,46 +1,46 @@
 # Vivaldi Dynamic Island
+*(An AI-Vibecoded UI Mod powered by Antigravity 2.0)*
 
-A native UI mod for the Vivaldi Browser that adds an interactive, macOS-style Dynamic Island to the top of the browser window. It automatically detects media playing in any tab (like YouTube or YouTube Music) and provides a floating control center with synchronized lyrics, album art, and playback controls.
+<p align="center">
+  <img src="screenshot.png" alt="Vivaldi Dynamic Island Preview" width="700"/>
+</p>
 
-![Demo Placeholder - Replace with a GIF or Screenshot of the Island](screenshot.png)
+## The Reality Check (How this was actually built)
+I am a 2nd-year engineering student specializing in CS, IoT, and Cybersecurity. I openly dislike frontend development. **I did not write the HTML/CSS/JS syntax for this project.** Instead, I used this project to test the limits of agentic AI (Google's Antigravity 2.0). I acted as the System Architect, Product Manager, and QA Tester. I defined the logic, architected the features, diagnosed complex Chromium engine bugs, and wrangled Windows file paths, while the AI generated the raw code based on my iterative debugging. 
 
-## Why I Built This
-
-I wanted to see if I could bring an Apple-style UI concept into a desktop web browser. Vivaldi is unique because its entire UI is built using standard web technologies (HTML/CSS/JS). Instead of building a standard Chrome extension—which is sandboxed and restricted to the webpage viewport—I decided to inject a script directly into Vivaldi's core `browser.html` file. 
-
-This allowed the Island to break out of the webpage and live natively in the browser's title bar, acting as a global UI component regardless of what tab is active.
+This repository is an artifact showing how far you can push a desktop browser using AI-assisted development.
+*(This is a vibecoded mess and you will encounter bugs so beware of that)*
 
 ## Features
+* **Native Browser UI:** Bypasses standard Chrome Extension sandboxes. The Island lives directly in Vivaldi's native title bar, meaning it works globally across all tabs (even settings and new tab pages).
+* **Apple Music-Style Lyrics:** Features a drop-down, glassmorphism floating panel with time-synced, interactive `.lrc` lyrics. Click any lyric to instantly seek the track.
+* **Smart UI States:** Automatically morphs from a collapsed pulsing pill to an expanded control center with high-res album art based on hover states and active audio output.
+* **Main-World API Injection:** Zero-lag playback controls that bypass standard UI throttling.
 
-* **Global Media Polling**: Silently polls audio-emitting tabs in the background using Chrome's internal Extension APIs.
-* **Synchronized Lyrics**: Parses `.lrc` files on the fly and syncs lyrics to the active song.
-* **Interactive Timeline**: Click anywhere on the progress bar or the lyrics to seek the track.
-* **Hardware-Accelerated UI**: Built entirely in Vanilla JS and CSS3 without bulky frameworks to ensure zero lag.
-* **Instant UX Feedback**: Custom visual locking mechanism that masks network buffering latency when skipping tracks.
+## The Technical Hurdles Conquered
+Getting this to work required solving several deep system and browser-engine quirks:
 
-## Technical Challenges
+**1. The YouTube Music "Two-Video" Offset Bug**
+YouTube Music is notoriously difficult to scrape. It simultaneously loads both the audio track and the full music video into the background, cropping the time mathematically via JS. Standard `<video>` tag scraping pulled wildly incorrect durations. 
+* *The Fix:* Engineered a DOM scraper that reads the logical text from the UI itself (e.g., `0:06 / 3:59`) and compares it against the physical video element to calculate exact mathematical time offsets for seeking.
 
-**The YouTube Music Offset Bug**
-One of the biggest hurdles was keeping the Island's progress bar in sync with YouTube Music. I originally tried pulling timestamps directly from the `<video>` elements, but I noticed the Island was showing wildly incorrect durations (e.g., 4:50 instead of 3:59).
+**2. Defeating Chromium Background Tab Throttling**
+Initially, skipping tracks took 1-2 seconds. Chromium violently throttles JS execution in background tabs to save CPU. 
+* *The Fix:* Ripped out standard UI-click simulations and implemented Main-World Injection. The mod now injects a script directly into YouTube's main context, bypassing the UI entirely and natively triggering the core `movie_player.nextVideo()` engine for zero-latency control.
 
-I eventually realized that for cropped tracks, YouTube Music loads the *entire* music video into the background, but uses Javascript to apply a mathematical offset to hide the intro. Relying on standard media APIs returned the raw, uncropped physical video length. 
-
-To fix this, I built a custom DOM scraper that reads the logical timestamps directly from YouTube Music's UI (e.g., scraping the text "0:06 / 3:59"). The script then calculates the exact offset between the UI and the physical video element, translating logical clicks on the Island back into absolute physical timestamps.
+**3. Bypassing Windows Registry & Path Locks**
+Standard installation attempts caused Vivaldi's Crashpad to self-destruct due to hidden Administrator ghost processes holding named pipes hostage.
+* *The Fix:* Built a custom PowerShell installer (`install.ps1`) wrapped in a Windows Batch script that safely isolates the installation, force-kills background Chromium tasks, backs up Vivaldi's core `browser.html`, injects the mod, and proxies `explorer.exe` to relaunch the browser without triggering elevation blocks.
 
 ## Installation
-
-Since this modifies the core browser UI, it cannot be distributed via the Chrome Web Store.
+*Because this modifies the core browser UI, it cannot be distributed via the Chrome Web Store.*
 
 1. Close Vivaldi.
 2. Clone or download this repository.
 3. Right-click `UPDATE (Run as Admin).bat` and run it as an Administrator.
-4. The script will automatically locate your Vivaldi installation, back up your original `browser.html`, and inject the mod.
-5. Reopen Vivaldi.
+4. The script will automatically locate your Vivaldi installation, inject the custom `dynamic-island.js` directly into `browser.html`, and safely relaunch the browser.
 
-*Note: You will need to re-run the `.bat` script whenever Vivaldi installs a major browser update, as updates overwrite `browser.html`.*
+*(Note: You will need to re-run the script whenever Vivaldi pushes a major browser update, as updates overwrite core HTML files.)*
 
-## Stack
-
-* **Vanilla Javascript** (ES5/ES6 compatible to ensure stability within the Vivaldi UI loop)
-* **CSS3** (Transforms, transitions, and z-index layering)
-* **Windows Batch Scripting** (For the automated installer)
+## Contributions
+This codebase is a product of AI "vibecoding" and aggressive iterative prompting. If you are a dedicated frontend developer who wants to clean up the CSS transitions, optimize the JS event listeners, or fix any edge-case bugs, Pull Requests are highly welcome!
