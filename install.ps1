@@ -11,13 +11,13 @@ param (
 if (-not $VivaldiPath) {
     $candidates = @(
         "C:\VivaldiBrowser\Application",
-        "C:\Users\Akshar Srijan\Vivaldi",
-        "C:\Users\Akshar Srijan\Documents\Vivaldi",
-        "C:\Users\Akshar Srijan\Desktop\Vivaldi",
-        "C:\Users\Akshar Srijan\Desktop\Vivaldi\Application",
         "$env:LOCALAPPDATA\Vivaldi\Application",
         "$env:ProgramFiles\Vivaldi\Application",
-        "${env:ProgramFiles(x86)}\Vivaldi\Application"
+        "${env:ProgramFiles(x86)}\Vivaldi\Application",
+        "$env:USERPROFILE\Vivaldi",
+        "$env:USERPROFILE\Documents\Vivaldi",
+        "$env:USERPROFILE\Desktop\Vivaldi",
+        "$env:USERPROFILE\Desktop\Vivaldi\Application"
     )
     foreach ($c in $candidates) {
         if (Test-Path $c) { $VivaldiPath = $c; break }
@@ -95,12 +95,6 @@ if ($content -match [regex]::Escape($scriptTag)) {
     [System.IO.File]::WriteAllText($windowHtml, $newContent, [System.Text.Encoding]::UTF8)
     Write-Host "Patched window.html successfully with Regex parsing." -ForegroundColor Green
 }
-
-Write-Host ""
-Write-Host "[OK] Installation complete! Restart Vivaldi to activate the Dynamic Island." -ForegroundColor Green
-Write-Host ""
-Write-Host "     Hover the pill at the top-center of the browser window" -ForegroundColor Gray
-Write-Host "     whenever media is playing to expand the controls." -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "[OK] Installation complete! Restart Vivaldi to activate the Dynamic Island." -ForegroundColor Green

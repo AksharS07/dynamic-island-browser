@@ -126,8 +126,6 @@
       'transition:background .2s,color .2s,transform .15s;}',
     '.vdi-icon-btn:hover{background:rgba(255,255,255,.15);color:#fff;transform:scale(1.08);}',
     '.vdi-icon-btn.active{color:var(--vdi-accent,' + CFG.defaultAccent + ');}',
-      '@keyframes vdi-pulse{0%{opacity:0.3 !important;}50%{opacity:1 !important;}100%{opacity:0.3 !important;}}',
-      '.vdi-loading{animation:vdi-pulse 1s infinite;}',
     '.vdi-icon-btn svg{width:15px;height:15px;pointer-events:none;}',
     '#vdi-play{width:40px;height:40px;background:var(--vdi-grad,' + CFG.defaultGradient + ');',
       'color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.45);',
@@ -191,8 +189,8 @@
             '<button class="vdi-btn" id="vdi-next" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zM7.66 12.82l5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07c-.57.4-.57 1.24 0 1.64z"/></svg></button>' +
           '</div>' +
           '<div id="vdi-ctrl-extra">' +
-            '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics" style="opacity: 0.3; pointer-events: none;">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
+            '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics" style="display:none">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>' +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -327,10 +325,12 @@
   // ══════════════════════════════════════════════════════════════
   //  Tab scripts  (plain functions – no arrow fns, no async)
   // ══════════════════════════════════════════════════════════════
-    function TAB_getState() {
+  function TAB_getState() {
     var vids = document.querySelectorAll('video');
     var isYTMusic = window.location.hostname === 'music.youtube.com';
-    var uiCur = null, uiDur = null;
+    var pipOk = !!(!isYTMusic && document.pictureInPictureEnabled && vids.length &&
+                   Array.prototype.slice.call(vids).some(function(v){return !v.disablePictureInPicture;}));
+    var uiDur = null;
     
     try {
       if (isYTMusic) {
@@ -338,41 +338,38 @@
         if (timeInfo) {
           var parts = timeInfo.textContent.trim().split('/');
           if (parts.length === 2) {
-            uiCur = parts[0].trim().split(':').reduce(function(a,v){return (60*a) + parseInt(v);}, 0);
             uiDur = parts[1].trim().split(':').reduce(function(a,v){return (60*a) + parseInt(v);}, 0);
           }
         }
       } else if (window.location.hostname.indexOf('youtube.com') > -1) {
-        var tc = document.querySelector('.ytp-time-current');
         var td = document.querySelector('.ytp-time-duration');
-        if (tc) uiCur = tc.textContent.trim().split(':').reduce(function(a,v){return (60*a) + parseInt(v);}, 0);
         if (td) uiDur = td.textContent.trim().split(':').reduce(function(a,v){return (60*a) + parseInt(v);}, 0);
       }
     } catch(e) {}
 
     var el = null;
-    for (var i=0; i<vids.length; i++) {
-      if (!vids[i].paused && vids[i].currentTime > 0) { el = vids[i]; break; }
+    if (uiDur !== null && uiDur > 0) {
+      for (var i=0; i<vids.length; i++) {
+        if (Math.abs(vids[i].duration - uiDur) <= 2) { el = vids[i]; break; }
+      }
+    }
+    if (!el) {
+      for (var i=0; i<vids.length; i++) {
+        if (!vids[i].paused && vids[i].currentTime > 0) { el = vids[i]; break; }
+      }
     }
     if (!el) el = document.querySelector('.html5-main-video');
     if (!el && vids.length) el = vids[vids.length - 1];
 
     try {
-      var ms = navigator.mediaSession;
-      var art = null;
-      if (ms && ms.metadata && ms.metadata.artwork && ms.metadata.artwork.length) {
-        art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src;
-      }
-      var pipOk = !!(!isYTMusic && document.pictureInPictureEnabled && vids.length &&
-                     Array.prototype.slice.call(vids).some(function(v){return !v.disablePictureInPicture;}));
-
+      var ms = navigator.mediaSession; var art = null; if (ms && ms.metadata && ms.metadata.artwork && ms.metadata.artwork.length) { art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src; }
       return {
         title    : (ms && ms.metadata && ms.metadata.title)  || '',
         artist   : (ms && ms.metadata && ms.metadata.artist) || '',
         artwork  : art,
         isPlaying: (ms && ms.playbackState==='playing') || (el ? !el.paused : false),
-        duration : (uiDur !== null && uiDur > 0) ? uiDur : (el ? (isFinite(el.duration) ? el.duration : 0) : 0),
-        position : (uiCur !== null && uiCur >= 0) ? uiCur : (el ? el.currentTime : 0),
+        duration : el ? (isFinite(el.duration) ? el.duration : 0) : 0,
+        position : el ? el.currentTime : 0,
         hasMedia : !!(el || (ms && ms.metadata && ms.metadata.title)),
         volume   : el ? el.volume : 1,
         pipOk    : pipOk,
@@ -380,7 +377,7 @@
     } catch(e) { return null; }
   }
 
-    function TAB_doAction(act, val) {
+  function TAB_doAction(act, val) {
     try {
       var ms  = navigator.mediaSession;
       var els = Array.prototype.slice.call(document.querySelectorAll('video,audio'));
@@ -414,28 +411,7 @@
           if (nb) nb.click(); else el.currentTime = el.duration;
         }
       } else if (act === 'seek' && typeof val === 'number') {
-        var u = null;
-        try {
-          if (window.location.hostname === 'music.youtube.com') {
-            var t = document.querySelector('.time-info.ytmusic-player-bar');
-            if (t) {
-              var p = t.textContent.trim().split('/');
-              if (p.length === 2) {
-                u = p[0].trim().split(':').reduce(function(a,x){return (60*a)+parseInt(x);},0);
-              }
-            }
-          } else if (window.location.hostname.indexOf('youtube.com') > -1) {
-            var tc = document.querySelector('.ytp-time-current');
-            if (tc) {
-              u = tc.textContent.trim().split(':').reduce(function(a,x){return (60*a)+parseInt(x);},0);
-            }
-          }
-        } catch(e){}
-        var target = document.querySelector('.html5-main-video') || el;
-        if (target) {
-          var offset = (u !== null && u >= 0) ? (target.currentTime - u) : 0;
-          target.currentTime = val + offset;
-        }
+        var v = document.querySelectorAll('video'); var u = null; try { if (window.location.hostname === 'music.youtube.com') { var t = document.querySelector('.time-info.ytmusic-player-bar'); if (t) { var p = t.textContent.trim().split('/'); if (p.length === 2) u = p[1].trim().split(':').reduce(function(a,x){return (60*a)+parseInt(x);},0); } } else { var td = document.querySelector('.ytp-time-duration'); if (td) u = td.textContent.trim().split(':').reduce(function(a,x){return (60*a)+parseInt(x);},0); } } catch(e){} var target = null; if(u>0){ for(var i=0;i<v.length;i++){ if(Math.abs(v[i].duration-u)<=2){target=v[i];break;} } } if(!target) target=document.querySelector('.html5-main-video'); if(target) target.currentTime = val;
       }
     } catch(e) {}
   }
@@ -483,23 +459,7 @@
     S.pollTimer3 = setTimeout(poll, 900);
   }
 
-  function feedback(isSkip) {
-    var info = document.getElementById('vdi-info');
-    if (info) info.style.opacity = '0.4';
-    if (isSkip) {
-      S.pendingTrackChange = true;
-      S.pendingOldTitle = S.title;
-      if (S.skipTimeout) clearTimeout(S.skipTimeout);
-      S.skipTimeout = setTimeout(function() {
-        S.pendingTrackChange = false;
-        if (info) info.style.opacity = '1';
-      }, 2500);
-    }
-  }
-
   function sendAction(act, val) {
-    if (act === 'next' || act === 'prev') feedback(true);
-    else feedback(false);
     var args = (val !== undefined) ? [act, val] : [act];
     execInTab(S.tabId, TAB_doAction, args, null);
     rapidPoll();
@@ -540,20 +500,17 @@
               if (!res) { S.hasMedia=true; updateUI(); return; }
               
               if (S.pendingTrackChange) {
-                if (res.title === S.pendingOldTitle || !res.title) {
+                if (res.title === S.pendingOldTitle) {
+                  // Still buffering the new track on YouTube
+                  // Lock the old state so the UI doesn't abruptly switch back and forth
                   res.title = S.title;
                   res.artist = S.artist;
                   res.artwork = S.artwork;
                 } else {
+                  // Track successfully changed!
                   S.pendingTrackChange = false;
                   if (S.skipTimeout) clearTimeout(S.skipTimeout);
-                  var info = document.getElementById('vdi-info');
-                  if (info) info.style.opacity = '1';
-                }
-              } else {
-                var info = document.getElementById('vdi-info');
-                if (info && info.style.opacity === '0.4' && res.title === S.title) {
-                  info.style.opacity = '1';
+                  if ($('vdi-info')) $('vdi-info').style.opacity = '1';
                 }
               }
 
@@ -578,103 +535,79 @@
   // ══════════════════════════════════════════════════════════════
   //  Lyrics  (fetch with XMLHttpRequest – no async/await)
   // ══════════════════════════════════════════════════════════════
-  async function fetchLyrics(title, artist, duration) {
+  function fetchLyrics(title, artist, duration) {
     var key = title + '|' + artist;
     S.lastLyricsKey = key;
     S.lyricsLines   = [];
     S.lyricsIdx     = -1;
     S.lyricsSynced  = false;
-    
-    var btn = document.getElementById('vdi-lyr-btn');
-    if (btn) {
-      btn.classList.add('vdi-loading');
-    }
-    
+    $('vdi-lyr-btn').style.display = 'none';
     lyrPanel.classList.remove('show');
-    document.getElementById('vdi-lyrics-scroll').innerHTML = '';
-
-    function stopLoading(success) {
-      if (btn) {
-        btn.classList.remove('vdi-loading');
-        if (success) {
-          btn.style.opacity = '1';
-          btn.style.pointerEvents = 'auto';
-        } else {
-          btn.style.opacity = '0.3';
-          btn.style.pointerEvents = 'none';
-        }
-      }
-    }
-
-    function processData(data) {
-      if (key !== S.lastLyricsKey) return;
-      var lines = [];
-      if (data.syncedLyrics) {
-        S.lyricsSynced = true;
-        var raw = data.syncedLyrics.split('\n');
-        for (var i=0; i<raw.length; i++) {
-          var m = raw[i].match(/\[(\d+):(\d+\.\d+)\](.*)/);
-          if (m) lines.push({ time: parseInt(m[1])*60 + parseFloat(m[2]), text: m[3].trim() });
-        }
-        lines.sort(function(a,b){return a.time-b.time;});
-      } else if (data.plainLyrics) {
-        S.lyricsSynced = false;
-        var plines = data.plainLyrics.split('\n');
-        for (var j=0; j<plines.length; j++) lines.push({ time:0, text:plines[j].trim() });
-      }
-      if (lines.length) {
-        S.lyricsLines = lines;
-        // SECURITY PATCH: Sanitize text to prevent XSS injection
-        function escapeHTML(str) {
-          var div = document.createElement('div');
-          div.textContent = str;
-          return div.innerHTML;
-        }
-
-        var html = '';
-        for (var k=0; k<lines.length; k++) {
-          var cls = S.lyricsSynced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
-          var timeAttr = S.lyricsSynced ? ' data-time="' + lines[k].time + '"' : '';
-          var safeText = lines[k].text ? escapeHTML(lines[k].text) : '&nbsp;';
-          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '"' + timeAttr + '>' + safeText + '</div>';
-        }
-        document.getElementById('vdi-lyrics-scroll').innerHTML = html;
-        stopLoading(true);
-      } else {
-        stopLoading(false);
-      }
-    }
+    $('vdi-lyrics-scroll').innerHTML = '';
 
     try {
-      var cTitle = title.replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\[.*?\]\s*/g, '').trim();
-      var cArtist = (artist || '').split('&')[0].split(',')[0].split(/(?:\s+ft\.|\s+feat\.)/i)[0].trim();
-      var q = encodeURIComponent(cTitle + ' ' + cArtist);
+      var params = 'track_name=' + encodeURIComponent(title) +
+                   '&artist_name=' + encodeURIComponent(artist || '');
+      if (duration > 0) params += '&duration=' + Math.round(duration);
 
-      var res = await fetch('https://lrclib.net/api/search?q=' + q, {
-        headers: { 'User-Agent': 'VivaldiDynamicIsland/1.0' }
-      });
-      if (!res.ok) throw new Error('API Error');
-      var arr = await res.json();
-      
-      if (key !== S.lastLyricsKey) return;
-      
-      if (arr && arr.length) {
-        var best = arr[0];
-        for (var i=0; i<arr.length; i++) {
-          if (arr[i].syncedLyrics && Math.abs(arr[i].duration - duration) <= 3) { best = arr[i]; break; }
-        }
-        if (!best.syncedLyrics) {
-          for (var i=0; i<arr.length; i++) {
-            if (arr[i].syncedLyrics) { best = arr[i]; break; }
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', CFG.lyricsApi + '?' + params, true);
+      xhr.timeout = 5000;
+      xhr.onload = function() {
+        try {
+          if (xhr.status !== 200) return;
+          // Check track still matches
+          if (key !== S.lastLyricsKey) return;
+          var data = JSON.parse(xhr.responseText);
+          var lines = [];
+
+          if (data.syncedLyrics) {
+            S.lyricsSynced = true;
+            var raw = data.syncedLyrics.split('\n');
+            for (var i=0; i<raw.length; i++) {
+              var m = raw[i].match(/\[(\d+):(\d+\.\d+)\](.*)/);
+              if (m) lines.push({ time: parseInt(m[1])*60 + parseFloat(m[2]), text: m[3].trim() });
+            }
+            lines.sort(function(a,b){return a.time-b.time;});
+          } else if (data.plainLyrics) {
+            S.lyricsSynced = false;
+            var plines = data.plainLyrics.split('\n');
+            for (var j=0; j<plines.length; j++) lines.push({ time:0, text:plines[j].trim() });
           }
-        }
-        processData(best);
-      } else {
-        stopLoading(false);
-      }
-    } catch(e) {
-      if (key === S.lastLyricsKey) stopLoading(false);
-    }
+
+          if (lines.length) {
+            S.lyricsLines = lines;
+            var html = '';
+            for (var k=0; k<lines.length; k++) {
+              var cls = S.lyricsSynced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
+              html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
+            }
+            $('vdi-lyrics-scroll').innerHTML = html;
+            $('vdi-lyr-btn').style.display = 'flex';
+            if (S.lyricsOn) lyrPanel.classList.add('show');
+            
+            // Add interactivity to synced lyrics
+            if (S.lyricsSynced) {
+              for (var n=0; n<lines.length; n++) {
+                (function(tTarget) {
+                  var lineEl = $('vdi-lyr-' + n);
+                  if (lineEl) {
+                    lineEl.addEventListener('click', function(e) {
+                      e.stopPropagation();
+                      S.position = tTarget;
+                      refreshProgress();
+                      sendAction('seek', tTarget);
+                    });
+                  }
+                })(lines[n].time);
+              }
+            }
+          }
+        } catch(e) {}
+      };
+      xhr.onerror = xhr.ontimeout = function() {};
+      xhr.send();
+    } catch(e) {}
   }
 
   function syncLyrics() {
@@ -791,33 +724,11 @@
   // ══════════════════════════════════════════════════════════════
   //  Start
   // ══════════════════════════════════════════════════════════════
- // ══════════════════════════════════════════════════════════════
-  //  Start (Event-Driven Architecture)
-  // ══════════════════════════════════════════════════════════════
   poll();
-  
-  // Hook into Chromium's native event bus instead of looping a timer
-  if (chrome && chrome.tabs) {
-    chrome.tabs.onUpdated.addListener(poll);
-    chrome.tabs.onActivated.addListener(poll);
-    chrome.tabs.onRemoved.addListener(poll);
-  }
-  
+  setInterval(poll, CFG.pollInterval);
   resetIdle();
+
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
 
