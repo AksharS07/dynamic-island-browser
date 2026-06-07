@@ -1,29 +1,19 @@
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║         VIVALDI DYNAMIC ISLAND  –  v3.1 (safe build)        ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-
 (function () {
   'use strict';
 
-  // ─── Guard: only run once ────────────────────────────────────
   if (document.getElementById('vdi')) return;
 
-  // ─── Config ───────────────────────────────────────────────────
   var CFG = {
     collapseDelay  : 500,
-    pollInterval   : 1500,
     tickInterval   : 1000,
     idleDelay      : 9000,
-    islandTop      : 54,
+    islandTop      : 10,
     defaultAccent  : '#6366f1',
     defaultGradient: 'linear-gradient(135deg,#6366f1,#a855f7)',
     defaultDark    : 'hsl(244,40%,6%)',
     lyricsApi      : 'https://lrclib.net/api/get',
   };
 
-  // ─── State ────────────────────────────────────────────────────
   var S = {
     isPlaying   : false,
     title       : '',
@@ -32,22 +22,15 @@
     duration    : 0,
     position    : 0,
     hasMedia    : false,
-    tabId       : null,
-    windowId    : null,
     lastArtwork : null,
-    volume      : 1,
     supportsPiP : false,
     lyricsOn    : false,
     lyricsLines : [],
     lyricsIdx   : -1,
     lastLyricsKey: '',
     isIdle      : false,
-    isIdle      : false,
   };
 
-  // ══════════════════════════════════════════════════════════════
-  //  CSS
-  // ══════════════════════════════════════════════════════════════
   var css = document.createElement('style');
   css.id = 'vdi-css';
   css.textContent = [
@@ -66,7 +49,6 @@
     '#vdi.vdi-expanded{width:400px;height:152px;border-radius:26px;}',
     '#vdi.vdi-idle{width:28px!important;height:28px!important;border-radius:14px!important;opacity:.95!important;}',
 
-    /* collapsed */
     '#vdi-col{position:absolute;inset:0;display:flex;align-items:center;gap:8px;padding:0 13px;opacity:1;transition:opacity .18s ease;}',
     '#vdi.vdi-expanded #vdi-col{opacity:0;pointer-events:none;}',
     '#vdi.vdi-idle #vdi-col{justify-content:center;padding:0;}',
@@ -78,21 +60,18 @@
     '@keyframes vdi-scroll{0%,28%{transform:translateX(0)}72%{transform:translateX(-55%)}100%{transform:translateX(0)}}',
     '#vdi-col-btn{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}',
 
-    /* expanded */
     '#vdi-exp{position:absolute;inset:0;display:flex;align-items:center;padding:14px 15px;gap:13px;',
       'opacity:0;transform:scale(.9);transition:opacity .28s ease .13s,transform .28s ease .13s;pointer-events:none;}',
     '#vdi.vdi-expanded #vdi-exp{opacity:1;transform:scale(1);pointer-events:all;}',
 
-    /* art */
-    '#vdi-art{width:74px;height:74px;border-radius:14px;flex-shrink:0;overflow:hidden;',
+    '#vdi-art{width:74px;height:74px;border-radius:14px;flex-shrink:0;overflow:hidden;isolation:isolate;',
       'background:var(--vdi-grad,' + CFG.defaultGradient + ');',
       'box-shadow:0 4px 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;',
       'transition:background .7s ease;}',
-    '#vdi-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;opacity:0;transition:opacity .4s ease;}',
+    '#vdi-art img{position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;border-radius:14px;opacity:0;transition:opacity .4s ease;}',
     '#vdi-art img.ok{opacity:1;}',
     '#vdi-art-ph{font-size:28px;line-height:1;}',
 
-    /* track */
     '#vdi-track{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}',
     '#vdi-title-row{display:flex;align-items:center;gap:6px;min-width:0;}',
     '#vdi-title{flex:1;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
@@ -104,7 +83,6 @@
     '#vdi-pip-btn svg{width:13px;height:13px;pointer-events:none;}',
     '#vdi-artist{font-size:11px;color:rgba(255,255,255,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
 
-    /* progress */
     '#vdi-prog-row{display:flex;align-items:center;gap:5px;}',
     '.vdi-t{font-size:9px;color:rgba(255,255,255,.5);min-width:22px;}',
     '#vdi-prog{flex:1;height:4px;background:rgba(255,255,255,.15);border-radius:99px;cursor:pointer;position:relative;}',
@@ -112,7 +90,6 @@
       'background:var(--vdi-accent,' + CFG.defaultAccent + ');',
       'transition:width .6s linear, background .7s ease;}',
 
-    /* controls */
     '#vdi-ctrl-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}',
     '#vdi-ctrl-main{display:flex;align-items:center;gap:6px;}',
     '#vdi-ctrl-extra{display:flex;align-items:center;gap:3px;}',
@@ -137,7 +114,6 @@
     '#vdi-play:hover{transform:scale(1.08);filter:brightness(1.1);}',
     '#vdi-play svg{width:18px;height:18px;}',
 
-    /* lyrics */
     '#vdi-lyrics-panel{position:fixed;top:' + (CFG.islandTop + 165) + 'px;left:50%;transform:translateX(-50%) translateY(-10px);',
       'z-index:2147483646;width:400px;height:380px;border-radius:32px;overflow:hidden;',
       'background:rgba(0,0,0,0.5);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);',
@@ -158,9 +134,6 @@
   ].join('');
   document.head.appendChild(css);
 
-  // ══════════════════════════════════════════════════════════════
-  //  DOM
-  // ══════════════════════════════════════════════════════════════
   var island = document.createElement('div');
   island.id = 'vdi';
   island.innerHTML =
@@ -176,7 +149,7 @@
     '<div id="vdi-exp">' +
       '<div id="vdi-art">' +
         '<div id="vdi-art-ph">\uD83C\uDFB5</div>' +
-        '<img id="vdi-art-img" src="" alt="" crossorigin="anonymous"/>' +
+        '<img id="vdi-art-img" src="" alt=""/>' +
       '</div>' +
       '<div id="vdi-track">' +
         '<div id="vdi-title-row">' +
@@ -205,7 +178,6 @@
         '</div>' +
       '</div>' +
     '</div>';
-
   document.body.appendChild(island);
 
   var lyrPanel = document.createElement('div');
@@ -213,7 +185,6 @@
   lyrPanel.innerHTML = '<div id="vdi-lyrics-scroll"></div>';
   document.body.appendChild(lyrPanel);
 
-  // ─── Helpers ──────────────────────────────────────────────────
   function $(id) { return document.getElementById(id); }
 
   function fmt(s) {
@@ -230,9 +201,6 @@
     if ($('vdi-col-icon')) $('vdi-col-icon').innerHTML = path;
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Color extraction
-  // ══════════════════════════════════════════════════════════════
   function extractVibrant(url, cb) {
     var img = new Image();
     img.crossOrigin = 'anonymous';
@@ -280,9 +248,7 @@
           }
         }
         
-        if (!best || maxSum === 0) {
-          cb(null); return; 
-        }
+        if (!best || maxSum === 0) { cb(null); return; }
         
         var mxA = Math.max(best.r,best.g,best.b), mnA = Math.min(best.r,best.g,best.b);
         var hA = 0, sA = 0, lA = (mxA+mnA)/2;
@@ -321,9 +287,6 @@
     island.style.setProperty('--vdi-glow',   glow);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  UI update
-  // ══════════════════════════════════════════════════════════════
   function updateUI() {
     if (!S.hasMedia) { island.classList.remove('vdi-visible'); return; }
     island.classList.add('vdi-visible');
@@ -355,7 +318,6 @@
       $('vdi-art-ph').style.display = 'flex';
       applyTheme(null);
     }
-
     refreshProgress();
   }
 
@@ -366,209 +328,10 @@
     $('vdi-dur').textContent = fmt(S.duration);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Tab scripts  (plain functions – no arrow fns, no async)
-  // ══════════════════════════════════════════════════════════════
-  function TAB_getState() {
-    var vids = document.querySelectorAll('video');
-    var isYTMusic = window.location.hostname === 'music.youtube.com';
-    var pipOk = !!(!isYTMusic && document.pictureInPictureEnabled && vids.length &&
-                   Array.prototype.slice.call(vids).some(function(v){return !v.disablePictureInPicture;}));
-    var uiDur = null;
-    var uiCur = null;
-    
-    try {
-      if (isYTMusic) {
-        var timeInfo = document.querySelector('.time-info.ytmusic-player-bar');
-        if (timeInfo) {
-          var parts = timeInfo.textContent.trim().split('/');
-          if (parts.length === 2) {
-            var parseTime = function(str) {
-              var p = str.trim().split(':').map(Number);
-              return p.length === 2 ? p[0]*60 + p[1] : (p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : 0);
-            };
-            uiCur = parseTime(parts[0]);
-            uiDur = parseTime(parts[1]);
-          }
-        }
-      } else if (window.location.hostname.indexOf('youtube.com') > -1) {
-        var td = document.querySelector('.ytp-time-duration');
-        if (td) uiDur = td.textContent.trim().split(':').reduce(function(a,v){return (60*a) + parseInt(v);}, 0);
-      }
-    } catch(e) {}
-
-    var el = null;
-    if (uiDur !== null && uiDur > 0 && !isYTMusic) {
-      for (var i=0; i<vids.length; i++) {
-        if (Math.abs(vids[i].duration - uiDur) <= 2) { el = vids[i]; break; }
-      }
-    }
-    if (!el) {
-      for (var i=0; i<vids.length; i++) {
-        if (!vids[i].paused && vids[i].currentTime > 0) { el = vids[i]; break; }
-      }
-    }
-    if (!el) el = document.querySelector('.html5-main-video');
-    if (!el && vids.length) el = vids[vids.length - 1];
-
-    try {
-      var ms = navigator.mediaSession; var art = null; if (ms && ms.metadata && ms.metadata.artwork && ms.metadata.artwork.length) { art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src; }
-      return {
-        title    : (ms && ms.metadata && ms.metadata.title)  || '',
-        artist   : (ms && ms.metadata && ms.metadata.artist) || '',
-        artwork  : art,
-        isPlaying: (ms && ms.playbackState==='playing') || (el ? !el.paused : false),
-        duration : (uiDur !== null && uiDur > 0) ? uiDur : (el ? (isFinite(el.duration) ? el.duration : 0) : 0),
-        position : (uiCur !== null && uiDur > 0) ? uiCur : (el ? el.currentTime : 0),
-        hasMedia : !!(el || (ms && ms.metadata && ms.metadata.title)),
-        volume   : el ? el.volume : 1,
-        pipOk    : pipOk,
-      };
-    } catch(e) { return null; }
-  }
-
-  function TAB_doAction(act, val) {
-    try {
-      var els = Array.prototype.slice.call(document.querySelectorAll('video,audio'));
-      var el  = null;
-      for (var i=0;i<els.length;i++) { if(!els[i].paused&&!els[i].ended){el=els[i];break;} }
-      if (!el) for (var j=0;j<els.length;j++) { if(els[j].paused&&els[j].currentTime>0){el=els[j];break;} }
-      if (!el && els.length) el = els[0];
-
-      if (act === 'toggle') {
-        if (el) {
-          if (el.paused) { el.play(); }
-          else           { el.pause(); }
-        }
-      } else if (act === 'prev') {
-        if (el) {
-          var pb = document.querySelector('ytmusic-player-bar .previous-button') || document.querySelector('.ytp-prev-button') || document.querySelector('.previous-button');
-          if (pb) pb.click(); else el.currentTime = 0;
-        }
-      } else if (act === 'next') {
-        if (el) {
-          var nb = document.querySelector('ytmusic-player-bar .next-button') || document.querySelector('.ytp-next-button') || document.querySelector('.next-button');
-          if (nb) nb.click(); else el.currentTime = el.duration;
-        }
-      } else if (act === 'seek' && typeof val === 'number') {
-        var isYTM = window.location.hostname === 'music.youtube.com';
-        var v = document.querySelectorAll('video'); var u = null; var uc = null; try { if (isYTM) { var t = document.querySelector('.time-info.ytmusic-player-bar'); if (t) { var p = t.textContent.trim().split('/'); if (p.length === 2) { var pT = function(s){var z=s.trim().split(':').map(Number); return z.length===2?z[0]*60+z[1]:(z.length===3?z[0]*3600+z[1]*60+z[2]:0);}; uc = pT(p[0]); u = pT(p[1]); } } } else { var td = document.querySelector('.ytp-time-duration'); if (td) u = td.textContent.trim().split(':').reduce(function(a,x){return (60*a)+parseInt(x);},0); } } catch(e){} var target = null; if(u>0 && !isYTM){ for(var i=0;i<v.length;i++){ if(Math.abs(v[i].duration-u)<=2){target=v[i];break;} } } if(!target) target=document.querySelector('.html5-main-video'); 
-        if(target) {
-          if (isYTM && uc !== null && u > 0) {
-            var offset = target.currentTime - uc;
-            target.currentTime = val + offset;
-          } else {
-            target.currentTime = val;
-          }
-        }
-      }
-    } catch(e) {}
-  }
-
-  function TAB_togglePiP() {
-    try {
-      var vids = Array.prototype.slice.call(document.querySelectorAll('video'));
-      var v = null;
-      for (var i=0;i<vids.length;i++) { if(!vids[i].paused){v=vids[i];break;} }
-      if (!v && vids.length) v = vids[0];
-      if (!v || !document.pictureInPictureEnabled) return false;
-      if (document.pictureInPictureElement) document.exitPictureInPicture();
-      else v.requestPictureInPicture();
-      return true;
-    } catch(e) { return false; }
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  function execInTab(tabId, fn, args, cb) {
-    if (!tabId) { if (cb) cb(null); return; }
-    try {
-      if (chrome && chrome.scripting && chrome.scripting.executeScript) {
-        var spec = { target:{tabId:tabId,allFrames:false}, func:fn };
-        if (args && args.length) spec.args = args;
-        chrome.scripting.executeScript(spec, function(res) {
-          if (chrome.runtime.lastError || !res) { if (cb) cb(null); return; }
-          if (cb) cb(res[0] ? res[0].result : null);
-        });
-      } else if (chrome && chrome.tabs && chrome.tabs.executeScript) {
-        var argStr = args ? args.map(function(a){return JSON.stringify(a);}).join(',') : '';
-        chrome.tabs.executeScript(tabId, {code:'(' + fn.toString() + ')(' + argStr + ')'}, function(res) {
-          if (chrome.runtime.lastError || !res) { if (cb) cb(null); return; }
-          if (cb) cb(res[0] !== undefined ? res[0] : null);
-        });
-      } else {
-        if (cb) cb(null);
-      }
-    } catch(e) { if (cb) cb(null); }
-  }
-
-  function rapidPoll() {
-    clearTimeout(S.pollTimer1); clearTimeout(S.pollTimer2); clearTimeout(S.pollTimer3);
-    S.pollTimer1 = setTimeout(poll, 150);
-    S.pollTimer2 = setTimeout(poll, 400);
-    S.pollTimer3 = setTimeout(poll, 900);
-  }
-
   function sendAction(act, val) {
-    var args = (val !== undefined) ? [act, val] : [act];
-    execInTab(S.tabId, TAB_doAction, args, null);
-    rapidPoll();
+    chrome.runtime.sendMessage({ type: 'VDI_ACTION', act: act, val: val });
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Media polling
-  // ══════════════════════════════════════════════════════════════
-  function poll() {
-    try {
-      if (!chrome || !chrome.tabs) return;
-      chrome.tabs.query({ audible: true }, function(tabs) {
-        try {
-          if (chrome.runtime.lastError) return;
-          var tab = (tabs && tabs.length) ? tabs[0] : null;
-
-          if (!tab) {
-            if (S.tabId !== null) {
-              execInTab(S.tabId, TAB_getState, [], function(res) {
-                if (!res) { S.hasMedia=false; updateUI(); return; }
-                S.isPlaying = res.isPlaying;
-                S.position  = res.position;
-                S.duration  = res.duration;
-                if (!res.hasMedia) S.hasMedia = false;
-                updateUI();
-              });
-            } else if (S.hasMedia) {
-              S.hasMedia = false; updateUI();
-            }
-            return;
-          }
-
-          S.tabId    = tab.id;
-          S.windowId = tab.windowId;
-
-          execInTab(tab.id, TAB_getState, [], function(res) {
-            try {
-              if (!res) { S.hasMedia=true; updateUI(); return; }
-              
-              S.hasMedia    = res.hasMedia || true;
-              S.isPlaying   = res.isPlaying;
-              S.title       = res.title  || tab.title || '';
-              S.artist      = res.artist || '';
-              S.artwork     = res.artwork || null;
-              S.duration    = res.duration || 0;
-              S.position    = res.position || 0;
-              S.supportsPiP = res.pipOk || false;
-              updateUI();
-              var key = S.title + '|' + S.artist;
-              if (key !== S.lastLyricsKey && S.title) fetchLyrics(S.title, S.artist, S.duration);
-            } catch(e) {}
-          });
-        } catch(e) {}
-      });
-    } catch(e) {}
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Lyrics  (fetch with XMLHttpRequest – no async/await)
-  // ══════════════════════════════════════════════════════════════
   function fetchLyrics(title, artist, duration) {
     var key = title + '|' + artist;
     S.lastLyricsKey = key;
@@ -579,8 +342,7 @@
     $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">Loading lyrics...</div>';
 
     try {
-      var params = 'track_name=' + encodeURIComponent(title) +
-                   '&artist_name=' + encodeURIComponent(artist || '');
+      var params = 'track_name=' + encodeURIComponent(title) + '&artist_name=' + encodeURIComponent(artist || '');
       if (duration > 0) params += '&duration=' + Math.round(duration);
 
       var xhr = new XMLHttpRequest();
@@ -589,7 +351,6 @@
       xhr.onload = function() {
         try {
           if (xhr.status !== 200) return;
-          // Check track still matches
           if (key !== S.lastLyricsKey) return;
           var data = JSON.parse(xhr.responseText);
           var lines = [];
@@ -651,7 +412,7 @@
     var pos = S.position;
     var idx = -1;
     for (var i = S.lyricsLines.length-1; i>=0; i--) {
-      if (S.lyricsLines[i].time <= pos + 0.3) { idx=i; break; } // 300ms lookahead
+      if (S.lyricsLines[i].time <= pos + 0.3) { idx=i; break; }
     }
     if (idx !== S.lyricsIdx && idx >= 0) {
       if (S.lyricsIdx >= 0) {
@@ -667,9 +428,6 @@
     }
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Idle dot
-  // ══════════════════════════════════════════════════════════════
   var idleTimer = null;
   function resetIdle() {
     clearTimeout(idleTimer);
@@ -685,9 +443,6 @@
     if (e.clientX>=r.left-80&&e.clientX<=r.right+80&&e.clientY>=r.top-60&&e.clientY<=r.bottom+60) resetIdle();
   });
 
-  // ══════════════════════════════════════════════════════════════
-  //  Expand / collapse
-  // ══════════════════════════════════════════════════════════════
   var colTimer = null;
   function handleMouseEnter() {
     clearTimeout(colTimer);
@@ -713,24 +468,12 @@
   lyrPanel.addEventListener('mouseenter', handleMouseEnter);
   lyrPanel.addEventListener('mouseleave', handleMouseLeave);
 
-  // ──── Double-click → jump to media tab ────────────────────────
   island.addEventListener('dblclick', function() {
-    if (S.tabId === null) return;
-    try { chrome.tabs.update(S.tabId, { active: true }); } catch(e){}
-    try { if (S.windowId !== null) chrome.windows.update(S.windowId, { focused: true }); } catch(e){}
+    sendAction('jump');
   });
 
-  // ══════════════════════════════════════════════════════════════
-  //  Button events
-  // ══════════════════════════════════════════════════════════════
-  $('vdi-prev').addEventListener('click', function(e) { 
-    e.stopPropagation(); 
-    sendAction('prev'); 
-  });
-  $('vdi-next').addEventListener('click', function(e) { 
-    e.stopPropagation(); 
-    sendAction('next'); 
-  });
+  $('vdi-prev').addEventListener('click', function(e) { e.stopPropagation(); sendAction('prev'); });
+  $('vdi-next').addEventListener('click', function(e) { e.stopPropagation(); sendAction('next'); });
   $('vdi-play').addEventListener('click', function(e) {
     e.stopPropagation();
     sendAction('toggle');
@@ -747,7 +490,7 @@
   });
   $('vdi-pip-btn').addEventListener('click', function(e) {
     e.stopPropagation();
-    execInTab(S.tabId, TAB_togglePiP, [], null);
+    sendAction('pip');
   });
   $('vdi-lyr-btn').addEventListener('click', function(e) {
     e.stopPropagation();
@@ -764,9 +507,6 @@
     }
   });
 
-  // ══════════════════════════════════════════════════════════════
-  //  Tick & EQ
-  // ══════════════════════════════════════════════════════════════
   setInterval(function() {
     if (S.isPlaying && S.duration > 0) {
       S.position = Math.min(S.duration, S.position + 1);
@@ -787,14 +527,35 @@
     }
   }, 200);
 
-  // ══════════════════════════════════════════════════════════════
-  //  Start
-  // ══════════════════════════════════════════════════════════════
-  poll();
-  setInterval(poll, CFG.pollInterval);
+  chrome.runtime.onMessage.addListener(function(msg) {
+    if (msg.type === 'VDI_UPDATE') {
+      var newState = msg.state;
+      S.hasMedia    = newState.hasMedia;
+      S.isPlaying   = newState.isPlaying;
+      S.title       = newState.title;
+      S.artist      = newState.artist;
+      S.artwork     = newState.artwork;
+      S.duration    = newState.duration;
+      S.position    = newState.position;
+      S.supportsPiP = newState.supportsPiP;
+      
+      updateUI();
+      var key = S.title + '|' + S.artist;
+      if (key !== S.lastLyricsKey && S.title) fetchLyrics(S.title, S.artist, S.duration);
+    }
+  });
+
+  try {
+    chrome.runtime.sendMessage({ type: 'VDI_REQUEST_STATE' }, function(state) {
+      if (state) {
+        S.hasMedia = state.hasMedia; S.isPlaying = state.isPlaying; S.title = state.title; S.artist = state.artist;
+        S.artwork = state.artwork; S.duration = state.duration; S.position = state.position; S.supportsPiP = state.supportsPiP;
+        updateUI();
+        var key = S.title + '|' + S.artist;
+        if (key !== S.lastLyricsKey && S.title) fetchLyrics(S.title, S.artist, S.duration);
+      }
+    });
+  } catch(e) {}
+
   resetIdle();
-
-  console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
-
 })();
-
