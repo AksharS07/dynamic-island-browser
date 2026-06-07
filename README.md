@@ -7,7 +7,11 @@ There are two versions:
 - **Vivaldi Mod** — lives natively in Vivaldi's title bar, works across every tab including settings and new tab pages. Looks and feels like it belongs there.
 - **Chrome Extension** — works on Chrome, Edge, Brave, or any Chromium browser. Sits as a fixed overlay at the top of every webpage. Less native-looking, but anyone can install it in 30 seconds without touching their browser's internals.
 
-![Vivaldi Dynamic Island Preview](screenshot.png)
+### Vivaldi — Native title bar mod
+![Vivaldi Demo](vivaldi-demo.gif)
+
+### Chrome / Edge — Unpacked extension
+![Edge Demo](edge-demo.gif)
 
 ---
 
