@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Dynamic Island for Web",
   "version": "1.0",
-  "description": "A standalone Chrome Extension that injects a Dynamic Island into every webpage to control media playback.",
+  "description": "Brings an Apple-style Dynamic Island to your browser! Syncs with background media, extracts album colors, shows live lyrics, and adds PiP controls directly to every webpage.",
   "icons": {
     "128": "icon128.png"
   },

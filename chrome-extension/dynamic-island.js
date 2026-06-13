@@ -558,4 +558,16 @@
   } catch(e) {}
 
   resetIdle();
+
+  // Fullscreen hide logic
+  document.addEventListener('fullscreenchange', function() {
+    if (document.fullscreenElement) {
+      island.style.display = 'none';
+      if (lyrPanel) lyrPanel.style.display = 'none';
+    } else {
+      island.style.display = '';
+      if (lyrPanel) lyrPanel.style.display = '';
+    }
+  });
+
 })();

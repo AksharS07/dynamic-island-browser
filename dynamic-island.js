@@ -794,6 +794,17 @@
   setInterval(poll, CFG.pollInterval);
   resetIdle();
 
+  // Fullscreen hide logic
+  document.addEventListener('fullscreenchange', function() {
+    if (document.fullscreenElement) {
+      island.style.display = 'none';
+      if (lyrPanel) lyrPanel.style.display = 'none';
+    } else {
+      island.style.display = '';
+      if (lyrPanel) lyrPanel.style.display = '';
+    }
+  });
+
   console.log('[Vivaldi Dynamic Island v3.1] Loaded OK');
 
 })();

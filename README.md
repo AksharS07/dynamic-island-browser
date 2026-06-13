@@ -58,10 +58,18 @@ The Vivaldi mod installer had to navigate Vivaldi's Crashpad process holding nam
 
 ## Installing the Vivaldi Mod
 
+**For Windows:**
 1. Close Vivaldi completely.
 2. Clone or download this repository.
 3. Right-click `UPDATE (Run as Admin).bat` and select Run as Administrator.
 4. The script will find your Vivaldi installation, back up `browser.html`, inject `dynamic-island.js`, and relaunch the browser.
+
+**For Linux (Ubuntu/Debian):**
+1. Close Vivaldi completely.
+2. Open a terminal in this repository.
+3. Make the script executable: `chmod +x install.sh`
+4. Run the installer: `sudo ./install.sh`
+5. The script will find Vivaldi in `/opt/vivaldi`, back up `window.html`, inject the mod, and finish.
 
 You will need to re-run this after Vivaldi major version updates since they overwrite the core HTML files.
 
