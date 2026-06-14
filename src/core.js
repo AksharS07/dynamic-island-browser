@@ -270,7 +270,8 @@ VDI.Core = (function() {
         position: (uiCur !== null && uiDur > 0) ? uiCur : (el ? el.currentTime : 0),
         hasMedia: !!(el || (ms && ms.metadata && ms.metadata.title)),
         volume: el ? el.volume : 1,
-        pipOk: pipOk
+        pipOk: pipOk,
+        isFullscreen: !!document.fullscreenElement
       };
     } catch (e) {
       return null;

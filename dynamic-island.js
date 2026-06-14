@@ -1,6 +1,3 @@
-(function() {
-'use strict';
-
 /**
  * Dynamic Island - Shared Core Module
  * Common utilities, color extraction, and lyrics handling
@@ -273,7 +270,8 @@ VDI.Core = (function() {
         position: (uiCur !== null && uiDur > 0) ? uiCur : (el ? el.currentTime : 0),
         hasMedia: !!(el || (ms && ms.metadata && ms.metadata.title)),
         volume: el ? el.volume : 1,
-        pipOk: pipOk
+        pipOk: pipOk,
+        isFullscreen: !!document.fullscreenElement
       };
     } catch (e) {
       return null;
@@ -418,10 +416,6 @@ VDI.Core = (function() {
   };
 })();
 
-})();
-
-(function() {
-'use strict';
 
 /**
  * Dynamic Island - Shared CSS Styles
@@ -665,10 +659,6 @@ VDI.Styles = (function() {
   };
 })();
 
-})();
-
-(function() {
-'use strict';
 
 /**
  * Dynamic Island - Vivaldi Platform
@@ -775,10 +765,6 @@ VDI.Platform.Vivaldi = (function() {
   };
 })();
 
-})();
-
-(function() {
-'use strict';
 
 /**
  * Dynamic Island - Shared UI Component
@@ -916,8 +902,9 @@ VDI.UI = (function() {
 
     // Main UI update
     function updateUI() {
-      if (!state.hasMedia) {
+      if (!state.hasMedia || state.isFullscreen) {
         island.classList.remove('vdi-visible');
+        if (state.isFullscreen && lyrPanel) lyrPanel.classList.remove('show');
         return;
       }
       island.classList.add('vdi-visible');
@@ -1173,6 +1160,9 @@ VDI.UI = (function() {
 
     // Fullscreen handling
     function setupFullscreen() {
+      // Chrome Extension context: injected directly into the page, so standard HTML5 API works instantly
+
+      // 2. Chrome Extension context: injected directly into the page, so standard HTML5 API works perfectly
       document.addEventListener('fullscreenchange', function() {
         if (document.fullscreenElement) {
           island.style.display = 'none';
@@ -1198,6 +1188,7 @@ VDI.UI = (function() {
       state.duration = newState.duration;
       state.position = newState.position;
       state.supportsPiP = newState.supportsPiP;
+      state.isFullscreen = newState.isFullscreen;
       state.tabId = newState.tabId !== undefined ? newState.tabId : state.tabId;
       state.windowId = newState.windowId !== undefined ? newState.windowId : state.windowId;
 
@@ -1237,7 +1228,6 @@ VDI.UI = (function() {
   };
 })();
 
-})();
 
 
 (function() {
@@ -1324,6 +1314,7 @@ VDI.UI = (function() {
           duration: res.duration || 0,
           position: res.position || 0,
           supportsPiP: res.pipOk || false,
+          isFullscreen: res.isFullscreen || false,
           tabId: tab.id,
           windowId: tab.windowId
         });

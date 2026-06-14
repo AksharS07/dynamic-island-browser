@@ -134,8 +134,9 @@ VDI.UI = (function() {
 
     // Main UI update
     function updateUI() {
-      if (!state.hasMedia) {
+      if (!state.hasMedia || state.isFullscreen) {
         island.classList.remove('vdi-visible');
+        if (state.isFullscreen && lyrPanel) lyrPanel.classList.remove('show');
         return;
       }
       island.classList.add('vdi-visible');
@@ -391,6 +392,9 @@ VDI.UI = (function() {
 
     // Fullscreen handling
     function setupFullscreen() {
+      // Chrome Extension context: injected directly into the page, so standard HTML5 API works instantly
+
+      // 2. Chrome Extension context: injected directly into the page, so standard HTML5 API works perfectly
       document.addEventListener('fullscreenchange', function() {
         if (document.fullscreenElement) {
           island.style.display = 'none';
@@ -416,6 +420,7 @@ VDI.UI = (function() {
       state.duration = newState.duration;
       state.position = newState.position;
       state.supportsPiP = newState.supportsPiP;
+      state.isFullscreen = newState.isFullscreen;
       state.tabId = newState.tabId !== undefined ? newState.tabId : state.tabId;
       state.windowId = newState.windowId !== undefined ? newState.windowId : state.windowId;
 

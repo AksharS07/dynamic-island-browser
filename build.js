@@ -24,7 +24,8 @@ function readFile(filename) {
 }
 
 function wrapWithIIFE(code) {
-  return `(function() {\n'use strict';\n\n${code}\n})();`;
+  // Pass through so modules share the same scope
+  return code;
 }
 
 function buildVivaldi() {
@@ -120,6 +121,7 @@ function buildVivaldi() {
           duration: res.duration || 0,
           position: res.position || 0,
           supportsPiP: res.pipOk || false,
+          isFullscreen: res.isFullscreen || false,
           tabId: tab.id,
           windowId: tab.windowId
         });
