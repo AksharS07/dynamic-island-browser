@@ -187,13 +187,24 @@ VDI.UI = (function() {
       state.lyricsSynced = false;
 
       $('vdi-lyr-btn').style.display = 'flex';
+      $('vdi-lyr-btn').classList.add('loading');
+      $('vdi-lyr-btn').innerHTML = '<div class="vdi-loading-dots"><span></span><span></span><span></span></div>';
       $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">Loading lyrics...</div>';
 
       VDI.Core.fetchLyrics(state.title, state.artist, state.duration, function(lines, synced) {
         if (key !== state.lastLyricsKey) return;
 
+        $('vdi-lyr-btn').classList.remove('loading');
+        $('vdi-lyr-btn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+
         if (!lines || !lines.length) {
-          $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">No lyrics found for this track.</div>';
+          $('vdi-lyr-btn').style.display = 'none';
+          if (state.lyricsOn) {
+            state.lyricsOn = false;
+            var panel = $('vdi-lyrics-panel');
+            if (panel) panel.classList.remove('show');
+            resetIdle();
+          }
           return;
         }
 
@@ -203,7 +214,30 @@ VDI.UI = (function() {
         var html = '';
         for (var k = 0; k < lines.length; k++) {
           var cls = synced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
-          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
+          var text = lines[k].text || '&nbsp;';
+          var wordsHtml = '&nbsp;';
+          
+          if (text !== '&nbsp;') {
+            wordsHtml = text.split(' ').map(function(w) { 
+              return '<span class="vdi-word">' + w + '</span>'; 
+            }).join(' ');
+          }
+
+          var duration = 2; // default fallback
+          if (synced && k < lines.length - 1) {
+            duration = lines[k+1].time - lines[k].time;
+            if (duration < 0.5) duration = 0.5;
+            if (duration > 10) duration = 10;
+          } else if (synced) {
+            duration = 4; // last line
+          }
+
+          var transHtml = '';
+          if (lines[k].translation) {
+            transHtml = '<div class="vdi-lyric-translation">' + lines[k].translation + '</div>';
+          }
+
+          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '" style="--line-dur: ' + duration + 's;">' + wordsHtml + transHtml + '</div>';
         }
         $('vdi-lyrics-scroll').innerHTML = html;
         $('vdi-lyr-btn').style.display = 'flex';
@@ -267,6 +301,7 @@ VDI.UI = (function() {
       }
       idleTimer = setTimeout(function() {
         if (!state.hasMedia) return;
+        if (state.lyricsOn) return; // Never collapse if lyrics are open
         state.isIdle = true;
         island.classList.add('vdi-idle');
       }, idleDelay);

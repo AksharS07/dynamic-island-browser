@@ -115,8 +115,9 @@ VDI.Core = (function() {
         }
 
         // Boost saturation and constrain lightness
-        sA = Math.min(1, sA * 1.5 + 0.3);
-        lA = Math.max(0.4, Math.min(0.65, lA));
+        // Avoid making dull colors look "dirty" and avoid blowing out saturated colors
+        sA = sA < 0.05 ? 0 : Math.min(1, sA * 1.2 + 0.1);
+        lA = Math.max(0.35, Math.min(0.7, lA));
 
         cb({
           accent: 'hsl(' + hA + ',' + Math.round(sA * 100) + '%,' + Math.round(lA * 100) + '%)',
@@ -137,56 +138,100 @@ VDI.Core = (function() {
   // ─────────────────────────────────────────────────────────────
   // Lyrics fetching from lrclib.net
   // ─────────────────────────────────────────────────────────────
-  var LYRICS_API = 'https://lrclib.net/api/get';
+  var LYRICS_API = 'https://lrclib.net/api/search';
 
   function fetchLyrics(title, artist, duration, cb) {
-    var params = 'track_name=' + encodeURIComponent(title) +
-                 '&artist_name=' + encodeURIComponent(artist || '');
-    if (duration > 0) params += '&duration=' + Math.round(duration);
+    var cleanTitle = title.replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    var cleanArtist = (artist || '').replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    
+    var q = cleanTitle + ' ' + cleanArtist;
+    var params = 'q=' + encodeURIComponent(q.trim());
+    var targetUrl = LYRICS_API + '?' + params;
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', LYRICS_API + '?' + params, true);
-    xhr.timeout = 5000;
-    xhr.onload = function() {
-      try {
-        if (xhr.status !== 200) {
-          cb(null, null);
-          return;
+    function parseLRCLib(data) {
+      if (!data) return null;
+      var lines = [];
+      var synced = false;
+      if (data.syncedLyrics) {
+        synced = true;
+        var raw = data.syncedLyrics.split('\n');
+        var rawLines = [];
+        for (var i = 0; i < raw.length; i++) {
+          var m = raw[i].match(/\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
+          if (m) {
+            rawLines.push({
+              time: parseInt(m[1]) * 60 + parseFloat(m[2]),
+              text: m[3].trim(),
+              translation: ''
+            });
+          }
         }
-        var data = JSON.parse(xhr.responseText);
-        var lines = [];
-        var synced = false;
-
-        if (data.syncedLyrics) {
-          synced = true;
-          var raw = data.syncedLyrics.split('\n');
-          for (var i = 0; i < raw.length; i++) {
-            var m = raw[i].match(/\[(\d+):(\d+\.\d+)\](.*)/);
-            if (m) {
-              lines.push({
-                time: parseInt(m[1]) * 60 + parseFloat(m[2]),
-                text: m[3].trim()
-              });
+        rawLines.sort(function(a, b) { return a.time - b.time; });
+        for (var i = 0; i < rawLines.length; i++) {
+          if (!rawLines[i].text) continue;
+          var currentLine = rawLines[i];
+          var j = i + 1;
+          while (j < rawLines.length && (rawLines[j].time - currentLine.time) < 0.1) {
+            if (rawLines[j].text) {
+              if (currentLine.translation) currentLine.translation += ' | ';
+              currentLine.translation += rawLines[j].text;
             }
+            rawLines[j].text = '';
+            j++;
           }
-          lines.sort(function(a, b) { return a.time - b.time; });
-        } else if (data.plainLyrics) {
-          synced = false;
-          var plines = data.plainLyrics.split('\n');
-          for (var j = 0; j < plines.length; j++) {
-            lines.push({ time: 0, text: plines[j].trim() });
+          if (currentLine.text) {
+            lines.push(currentLine);
           }
         }
-
-        cb(lines, synced);
-      } catch (e) {
-        cb(null, null);
+      } else if (data.plainLyrics) {
+        synced = false;
+        var plines = data.plainLyrics.split('\n');
+        for (var j = 0; j < plines.length; j++) {
+          lines.push({ time: 0, text: plines[j].trim() });
+        }
       }
-    };
-    xhr.onerror = xhr.ontimeout = function() {
-      cb(null, null);
-    };
-    xhr.send();
+      if (lines.length === 0) return null;
+      return { lines: lines, synced: synced };
+    }
+
+    function doFetch(url, isProxy) {
+      fetch(url)
+        .then(function(res) {
+          if (!res.ok) throw new Error('Bad status');
+          return res.json();
+        })
+        .then(function(responseData) {
+          var data = null;
+          if (Array.isArray(responseData)) {
+            for (var i = 0; i < responseData.length; i++) {
+              if (responseData[i].syncedLyrics) {
+                data = responseData[i];
+                break;
+              }
+            }
+            if (!data && responseData.length > 0) data = responseData[0];
+          } else {
+            data = responseData;
+          }
+          
+          var result = parseLRCLib(data);
+          if (result) {
+            cb(result.lines, result.synced);
+          } else {
+            throw new Error('No lyrics in response');
+          }
+        })
+        .catch(function(err) {
+          if (!isProxy) {
+            // Fallback to proxy to bypass Vivaldi CORS/Cloudflare UA blocks
+            doFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl), true);
+          } else {
+            cb(null, null);
+          }
+        });
+    }
+
+    doFetch(targetUrl, false);
   }
 
   // ─────────────────────────────────────────────────────────────

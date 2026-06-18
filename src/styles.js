@@ -176,6 +176,16 @@ VDI.Styles = (function() {
     );
     rules.push('.vdi-icon-btn:hover{background:rgba(255,255,255,.15);color:#fff;transform:scale(1.08);}');
     rules.push('.vdi-icon-btn.active{color:var(--vdi-accent,' + accent + ');}');
+    rules.push('.vdi-icon-btn.loading{pointer-events: none;}');
+    rules.push(
+      '.vdi-loading-dots{',
+        'display:flex;gap:3px;align-items:center;justify-content:center;height:100%;',
+      '}'
+    );
+    rules.push('.vdi-loading-dots span{width:4px;height:4px;background:currentColor;border-radius:50%;animation:vdi-bounce 0.6s infinite alternate;}');
+    rules.push('.vdi-loading-dots span:nth-child(2){animation-delay:0.2s;}');
+    rules.push('.vdi-loading-dots span:nth-child(3){animation-delay:0.4s;}');
+    rules.push('@keyframes vdi-bounce{ 0%{transform:translateY(0);} 100%{transform:translateY(-3px);} }');
     rules.push('.vdi-icon-btn svg{width:15px;height:15px;pointer-events:none;}');
 
     // Play button (special styling)
@@ -220,16 +230,29 @@ VDI.Styles = (function() {
     // Lyric lines
     rules.push(
       '.vdi-lyric-line{',
-        'font-size:22px;font-weight:700;line-height:1.5;color:rgba(255,255,255,0.25);',
-        'padding:14px 0;',
-        'transition:color 0.8s ease,transform 0.8s cubic-bezier(0.2,0.8,0.2,1), filter 0.8s ease;',
-        'transform-origin:left center;cursor:pointer;',
-        'filter:blur(1.5px);transform:scale(0.95);',
+        'font-size:22px;font-weight:700;line-height:1.6;color:rgba(255,255,255,0.3);',
+        'padding:16px 0;',
+        'margin: 0 10px;',
+        'transition:color 0.8s ease, transform 0.8s cubic-bezier(0.2,0.8,0.2,1), filter 0.8s ease;',
+        'transform-origin:center center;cursor:pointer;',
+        'filter:blur(2px);transform:scale(0.95);',
       '}'
     );
     rules.push('.vdi-lyric-line:hover{color:rgba(255,255,255,0.6);filter:blur(0px);}');
-    rules.push('.vdi-lyric-line.active{color:#fff;transform:scale(1.1);text-shadow:0 4px 20px rgba(0,0,0,0.6);filter:blur(0px);}');
-    rules.push('.vdi-lyric-line.unsynced{font-size:16px;color:rgba(255,255,255,0.8);transform:none;filter:none;}');
+    rules.push(
+      '.vdi-lyric-line.active{',
+        'transform:scale(1.05);text-shadow:0 4px 20px rgba(0,0,0,0.5);filter:blur(0px);',
+        'background:linear-gradient(to right, #fff 50%, rgba(255,255,255,0.25) 50%);',
+        'background-size:200% 100%;',
+        'background-position:100% 0;',
+        '-webkit-background-clip:text;',
+        '-webkit-text-fill-color:transparent;',
+        'animation:sweep var(--line-dur, 2s) linear forwards;',
+      '}'
+    );
+    rules.push('@keyframes sweep{ 0%{background-position:100% 0;} 100%{background-position:0% 0;} }');
+    rules.push('.vdi-lyric-line.unsynced{font-size:16px;color:rgba(255,255,255,0.8);transform:none;filter:none;-webkit-text-fill-color:#fff;}');
+    rules.push('.vdi-lyric-translation{font-size:14px;color:rgba(255,255,255,0.5);margin-top:6px;font-weight:500;}');
 
     return rules.join('');
   }

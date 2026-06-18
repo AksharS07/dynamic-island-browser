@@ -231,6 +231,31 @@ function buildChromeBackground() {
   console.log('  -> ' + DEST_CHROME_BG);
 }
 
+const { execSync } = require('child_process');
+
+function buildZip() {
+  console.log('Building Extension ZIP...');
+  const extDir = path.join(__dirname, 'chrome-extension');
+  const zipPath = path.join(__dirname, 'dynamic-island-extension.zip');
+  
+  try {
+    if (fs.existsSync(zipPath)) {
+      fs.unlinkSync(zipPath);
+    }
+    
+    // Windows
+    if (process.platform === 'win32') {
+      execSync(`powershell.exe -NoProfile -Command "Compress-Archive -Path '${extDir}\\*' -DestinationPath '${zipPath}' -Force"`);
+    } else {
+      // Mac/Linux
+      execSync(`cd "${extDir}" && zip -r "${zipPath}" ./*`);
+    }
+    console.log('  -> ' + zipPath);
+  } catch (e) {
+    console.error('Failed to build ZIP:', e.message);
+  }
+}
+
 // Run builds
 console.log('Dynamic Island Build');
 console.log('====================\n');
@@ -238,5 +263,6 @@ console.log('====================\n');
 buildVivaldi();
 buildChromeContent();
 buildChromeBackground();
+buildZip();
 
 console.log('\nBuild complete!');

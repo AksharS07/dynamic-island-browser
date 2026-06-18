@@ -115,8 +115,9 @@ VDI.Core = (function() {
         }
 
         // Boost saturation and constrain lightness
-        sA = Math.min(1, sA * 1.5 + 0.3);
-        lA = Math.max(0.4, Math.min(0.65, lA));
+        // Avoid making dull colors look "dirty" and avoid blowing out saturated colors
+        sA = sA < 0.05 ? 0 : Math.min(1, sA * 1.2 + 0.1);
+        lA = Math.max(0.35, Math.min(0.7, lA));
 
         cb({
           accent: 'hsl(' + hA + ',' + Math.round(sA * 100) + '%,' + Math.round(lA * 100) + '%)',
@@ -137,56 +138,100 @@ VDI.Core = (function() {
   // ─────────────────────────────────────────────────────────────
   // Lyrics fetching from lrclib.net
   // ─────────────────────────────────────────────────────────────
-  var LYRICS_API = 'https://lrclib.net/api/get';
+  var LYRICS_API = 'https://lrclib.net/api/search';
 
   function fetchLyrics(title, artist, duration, cb) {
-    var params = 'track_name=' + encodeURIComponent(title) +
-                 '&artist_name=' + encodeURIComponent(artist || '');
-    if (duration > 0) params += '&duration=' + Math.round(duration);
+    var cleanTitle = title.replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    var cleanArtist = (artist || '').replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    
+    var q = cleanTitle + ' ' + cleanArtist;
+    var params = 'q=' + encodeURIComponent(q.trim());
+    var targetUrl = LYRICS_API + '?' + params;
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', LYRICS_API + '?' + params, true);
-    xhr.timeout = 5000;
-    xhr.onload = function() {
-      try {
-        if (xhr.status !== 200) {
-          cb(null, null);
-          return;
+    function parseLRCLib(data) {
+      if (!data) return null;
+      var lines = [];
+      var synced = false;
+      if (data.syncedLyrics) {
+        synced = true;
+        var raw = data.syncedLyrics.split('\n');
+        var rawLines = [];
+        for (var i = 0; i < raw.length; i++) {
+          var m = raw[i].match(/\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
+          if (m) {
+            rawLines.push({
+              time: parseInt(m[1]) * 60 + parseFloat(m[2]),
+              text: m[3].trim(),
+              translation: ''
+            });
+          }
         }
-        var data = JSON.parse(xhr.responseText);
-        var lines = [];
-        var synced = false;
-
-        if (data.syncedLyrics) {
-          synced = true;
-          var raw = data.syncedLyrics.split('\n');
-          for (var i = 0; i < raw.length; i++) {
-            var m = raw[i].match(/\[(\d+):(\d+\.\d+)\](.*)/);
-            if (m) {
-              lines.push({
-                time: parseInt(m[1]) * 60 + parseFloat(m[2]),
-                text: m[3].trim()
-              });
+        rawLines.sort(function(a, b) { return a.time - b.time; });
+        for (var i = 0; i < rawLines.length; i++) {
+          if (!rawLines[i].text) continue;
+          var currentLine = rawLines[i];
+          var j = i + 1;
+          while (j < rawLines.length && (rawLines[j].time - currentLine.time) < 0.1) {
+            if (rawLines[j].text) {
+              if (currentLine.translation) currentLine.translation += ' | ';
+              currentLine.translation += rawLines[j].text;
             }
+            rawLines[j].text = '';
+            j++;
           }
-          lines.sort(function(a, b) { return a.time - b.time; });
-        } else if (data.plainLyrics) {
-          synced = false;
-          var plines = data.plainLyrics.split('\n');
-          for (var j = 0; j < plines.length; j++) {
-            lines.push({ time: 0, text: plines[j].trim() });
+          if (currentLine.text) {
+            lines.push(currentLine);
           }
         }
-
-        cb(lines, synced);
-      } catch (e) {
-        cb(null, null);
+      } else if (data.plainLyrics) {
+        synced = false;
+        var plines = data.plainLyrics.split('\n');
+        for (var j = 0; j < plines.length; j++) {
+          lines.push({ time: 0, text: plines[j].trim() });
+        }
       }
-    };
-    xhr.onerror = xhr.ontimeout = function() {
-      cb(null, null);
-    };
-    xhr.send();
+      if (lines.length === 0) return null;
+      return { lines: lines, synced: synced };
+    }
+
+    function doFetch(url, isProxy) {
+      fetch(url)
+        .then(function(res) {
+          if (!res.ok) throw new Error('Bad status');
+          return res.json();
+        })
+        .then(function(responseData) {
+          var data = null;
+          if (Array.isArray(responseData)) {
+            for (var i = 0; i < responseData.length; i++) {
+              if (responseData[i].syncedLyrics) {
+                data = responseData[i];
+                break;
+              }
+            }
+            if (!data && responseData.length > 0) data = responseData[0];
+          } else {
+            data = responseData;
+          }
+          
+          var result = parseLRCLib(data);
+          if (result) {
+            cb(result.lines, result.synced);
+          } else {
+            throw new Error('No lyrics in response');
+          }
+        })
+        .catch(function(err) {
+          if (!isProxy) {
+            // Fallback to proxy to bypass Vivaldi CORS/Cloudflare UA blocks
+            doFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl), true);
+          } else {
+            cb(null, null);
+          }
+        });
+    }
+
+    doFetch(targetUrl, false);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -595,6 +640,16 @@ VDI.Styles = (function() {
     );
     rules.push('.vdi-icon-btn:hover{background:rgba(255,255,255,.15);color:#fff;transform:scale(1.08);}');
     rules.push('.vdi-icon-btn.active{color:var(--vdi-accent,' + accent + ');}');
+    rules.push('.vdi-icon-btn.loading{pointer-events: none;}');
+    rules.push(
+      '.vdi-loading-dots{',
+        'display:flex;gap:3px;align-items:center;justify-content:center;height:100%;',
+      '}'
+    );
+    rules.push('.vdi-loading-dots span{width:4px;height:4px;background:currentColor;border-radius:50%;animation:vdi-bounce 0.6s infinite alternate;}');
+    rules.push('.vdi-loading-dots span:nth-child(2){animation-delay:0.2s;}');
+    rules.push('.vdi-loading-dots span:nth-child(3){animation-delay:0.4s;}');
+    rules.push('@keyframes vdi-bounce{ 0%{transform:translateY(0);} 100%{transform:translateY(-3px);} }');
     rules.push('.vdi-icon-btn svg{width:15px;height:15px;pointer-events:none;}');
 
     // Play button (special styling)
@@ -639,16 +694,29 @@ VDI.Styles = (function() {
     // Lyric lines
     rules.push(
       '.vdi-lyric-line{',
-        'font-size:22px;font-weight:700;line-height:1.5;color:rgba(255,255,255,0.25);',
-        'padding:14px 0;',
-        'transition:color 0.8s ease,transform 0.8s cubic-bezier(0.2,0.8,0.2,1), filter 0.8s ease;',
-        'transform-origin:left center;cursor:pointer;',
-        'filter:blur(1.5px);transform:scale(0.95);',
+        'font-size:22px;font-weight:700;line-height:1.6;color:rgba(255,255,255,0.3);',
+        'padding:16px 0;',
+        'margin: 0 10px;',
+        'transition:color 0.8s ease, transform 0.8s cubic-bezier(0.2,0.8,0.2,1), filter 0.8s ease;',
+        'transform-origin:center center;cursor:pointer;',
+        'filter:blur(2px);transform:scale(0.95);',
       '}'
     );
     rules.push('.vdi-lyric-line:hover{color:rgba(255,255,255,0.6);filter:blur(0px);}');
-    rules.push('.vdi-lyric-line.active{color:#fff;transform:scale(1.1);text-shadow:0 4px 20px rgba(0,0,0,0.6);filter:blur(0px);}');
-    rules.push('.vdi-lyric-line.unsynced{font-size:16px;color:rgba(255,255,255,0.8);transform:none;filter:none;}');
+    rules.push(
+      '.vdi-lyric-line.active{',
+        'transform:scale(1.05);text-shadow:0 4px 20px rgba(0,0,0,0.5);filter:blur(0px);',
+        'background:linear-gradient(to right, #fff 50%, rgba(255,255,255,0.25) 50%);',
+        'background-size:200% 100%;',
+        'background-position:100% 0;',
+        '-webkit-background-clip:text;',
+        '-webkit-text-fill-color:transparent;',
+        'animation:sweep var(--line-dur, 2s) linear forwards;',
+      '}'
+    );
+    rules.push('@keyframes sweep{ 0%{background-position:100% 0;} 100%{background-position:0% 0;} }');
+    rules.push('.vdi-lyric-line.unsynced{font-size:16px;color:rgba(255,255,255,0.8);transform:none;filter:none;-webkit-text-fill-color:#fff;}');
+    rules.push('.vdi-lyric-translation{font-size:14px;color:rgba(255,255,255,0.5);margin-top:6px;font-weight:500;}');
 
     return rules.join('');
   }
@@ -1047,13 +1115,24 @@ VDI.UI = (function() {
       state.lyricsSynced = false;
 
       $('vdi-lyr-btn').style.display = 'flex';
+      $('vdi-lyr-btn').classList.add('loading');
+      $('vdi-lyr-btn').innerHTML = '<div class="vdi-loading-dots"><span></span><span></span><span></span></div>';
       $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">Loading lyrics...</div>';
 
       VDI.Core.fetchLyrics(state.title, state.artist, state.duration, function(lines, synced) {
         if (key !== state.lastLyricsKey) return;
 
+        $('vdi-lyr-btn').classList.remove('loading');
+        $('vdi-lyr-btn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+
         if (!lines || !lines.length) {
-          $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">No lyrics found for this track.</div>';
+          $('vdi-lyr-btn').style.display = 'none';
+          if (state.lyricsOn) {
+            state.lyricsOn = false;
+            var panel = $('vdi-lyrics-panel');
+            if (panel) panel.classList.remove('show');
+            resetIdle();
+          }
           return;
         }
 
@@ -1063,7 +1142,30 @@ VDI.UI = (function() {
         var html = '';
         for (var k = 0; k < lines.length; k++) {
           var cls = synced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
-          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + (lines[k].text || '&nbsp;') + '</div>';
+          var text = lines[k].text || '&nbsp;';
+          var wordsHtml = '&nbsp;';
+          
+          if (text !== '&nbsp;') {
+            wordsHtml = text.split(' ').map(function(w) { 
+              return '<span class="vdi-word">' + w + '</span>'; 
+            }).join(' ');
+          }
+
+          var duration = 2; // default fallback
+          if (synced && k < lines.length - 1) {
+            duration = lines[k+1].time - lines[k].time;
+            if (duration < 0.5) duration = 0.5;
+            if (duration > 10) duration = 10;
+          } else if (synced) {
+            duration = 4; // last line
+          }
+
+          var transHtml = '';
+          if (lines[k].translation) {
+            transHtml = '<div class="vdi-lyric-translation">' + lines[k].translation + '</div>';
+          }
+
+          html += '<div class="' + cls + '" id="vdi-lyr-' + k + '" style="--line-dur: ' + duration + 's;">' + wordsHtml + transHtml + '</div>';
         }
         $('vdi-lyrics-scroll').innerHTML = html;
         $('vdi-lyr-btn').style.display = 'flex';
@@ -1127,6 +1229,7 @@ VDI.UI = (function() {
       }
       idleTimer = setTimeout(function() {
         if (!state.hasMedia) return;
+        if (state.lyricsOn) return; // Never collapse if lyrics are open
         state.isIdle = true;
         island.classList.add('vdi-idle');
       }, idleDelay);
