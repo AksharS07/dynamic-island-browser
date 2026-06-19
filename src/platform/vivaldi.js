@@ -70,9 +70,26 @@ VDI.Platform.Vivaldi = (function() {
     } catch (e) {}
   }
 
-  function requestPiP(tabId) {
-    execInTab(tabId, VDI.Core.togglePiP, [], null);
-  }
+    function requestPiP(mediaTabId) {
+      if (!chrome || !chrome.tabs) return;
+      
+      // Get the currently active tab so we can jump back
+      chrome.tabs.query({ active: true, currentWindow: true }, function(activeTabs) {
+        var originalTabId = (activeTabs && activeTabs.length) ? activeTabs[0].id : null;
+        
+        // If we are already on the media tab, just run it
+        if (originalTabId === mediaTabId) {
+          execInTab(mediaTabId, VDI.Core.togglePiP, [], null);
+          return;
+        }
+        
+        // Otherwise, teleport to the media tab
+        chrome.tabs.update(mediaTabId, { active: true }, function() {
+          // Pass the originalTabId to togglePiP so it can jump back
+          execInTab(mediaTabId, VDI.Core.togglePiP, [originalTabId], null);
+        });
+      });
+    }
 
   function pollMedia(callback) {
     try {
@@ -92,6 +109,14 @@ VDI.Platform.Vivaldi = (function() {
   function getMediaStateFromTab(tabId, callback) {
     execInTab(tabId, VDI.Core.getTabMediaState, [], callback);
   }
+
+  try {
+    chrome.runtime.onMessage.addListener(function(msg) {
+      if (msg.type === 'VDI_TELEPORT_BACK' && msg.tabId) {
+        try { chrome.tabs.update(msg.tabId, { active: true }); } catch (e) {}
+      }
+    });
+  } catch (e) {}
 
   return {
     execInTab: execInTab,

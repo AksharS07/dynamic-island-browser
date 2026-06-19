@@ -19,9 +19,11 @@ There are two versions:
 
 - **Media Playback Control:** Play, pause, skip, and scrub through tracks directly from the island. Double-click the island to jump directly to the media tab.
 - **Time-Synced Lyrics:** Fetches and displays beautifully animated, time-synced lyrics in their original language (no translations). Click any lyric line to instantly seek to that part of the song!
+- **High-Res Artwork Injection:** Automatically cross-references YouTube and Spotify tracks with the Apple Music API to fetch crisp, high-resolution album art, complete with a tiny Apple Music indicator!
 - **Auto-Collapse & Idle State:** Expands on hover to show album art and controls. When inactive, it automatically shrinks into a tiny, unobtrusive dot so it stays completely out of your way.
 - **Audio Visualizer:** Features a built-in EQ visualizer animation while music is playing (Static Visualizer).
-- **Picture-in-Picture (PiP):** Includes a toggle at the top-right of the island to pop out the currently playing video into PiP mode (note: PiP reliability varies depending on the website).
+- **Context-Aware PiP & Icons:** Includes a Picture-in-Picture (PiP) button. On standard YouTube videos, the lyrics icon intelligently hides itself to give priority to the PiP button. 
+- **Vivaldi PiP Teleportation Hack:** Because Vivaldi mods live outside the webpage, Chromium blocks PiP. The Vivaldi Mod uses a custom "Teleportation Hack" that instantly teleports you to the video tab, drops a glass overlay, and teleports you back the moment you click it, bypassing Chromium's strict user gesture requirement!
 - **Vibrant Theming:** Automatically extracts the dominant color from the album art and seamlessly themes the entire island—background, glow, accent, and progress bar—to match perfectly.
 
 ---
@@ -51,7 +53,7 @@ No build step, no dependencies, no account required.
 
 I am a 2nd-year CS/IoT/Cybersecurity engineering student. I do not enjoy frontend development. I did not write the HTML, CSS, or JS syntax for this project — that was handled by agentic AI (Google's Antigravity 2.0 and Claude).
 
-What I did do: defined the product, made every architectural decision, and acted as QA throughout. I caught bugs the AI missed repeatedly — a silent `ReferenceError` that was killing color theming entirely, a JavaScript closure bug that bound every lyrics click listener to the last line instead of the correct one, a `Promise.catch()` call that crashed silently on certain Chromium versions. The AI generated code; I decided what the code was supposed to do and whether it actually did it.
+What I did do: defined the product, made every architectural decision, and acted as QA throughout. I caught bugs the AI missed repeatedly — a silent `ReferenceError` that was killing color theming entirely, a JavaScript closure bug that bound every lyrics click listener to the last line instead of the correct one, an infinite loop in the Apple Music API fetcher that brought the browser to its knees, and Chromium's strict User Gesture requirements that completely blocked PiP in Vivaldi until we engineered the "Teleportation Hack". The AI generated code; I decided what the code was supposed to do and whether it actually did it.
 
 This is what AI-assisted development actually looks like in practice. It is a lot of iterative debugging and knowing when the output is wrong.
 

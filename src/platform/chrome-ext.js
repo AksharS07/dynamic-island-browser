@@ -105,9 +105,16 @@ VDI.Platform.ChromeExt = (function() {
                 broadcastState();
                 return;
               }
+              S.title = res.title || S.title;
+              S.artist = res.artist || S.artist;
+              S.artwork = res.artwork || S.artwork;
               S.isPlaying = res.isPlaying;
-              S.position = res.position;
               S.duration = res.duration;
+              S.position = res.position;
+              S.supportsPiP = res.pipOk || false;
+              S.isFullscreen = res.isFullscreen || false;
+              S.isYouTubeVideo = res.isYouTubeVideo || false;
+              S.isMusicApp = res.isMusicApp || false;
               if (!res.hasMedia) S.hasMedia = false;
               broadcastState();
             });
@@ -136,6 +143,8 @@ VDI.Platform.ChromeExt = (function() {
           S.duration = res.duration || 0;
           S.position = res.position || 0;
           S.supportsPiP = res.pipOk || false;
+          S.isYouTubeVideo = res.isYouTubeVideo || false;
+          S.isMusicApp = res.isMusicApp || false;
 
           broadcastState();
         });

@@ -34,9 +34,6 @@ VDI.UI = (function() {
         '<div id="vdi-track">' +
           '<div id="vdi-title-row">' +
             '<div id="vdi-title">No media</div>' +
-            '<button id="vdi-pip-btn" title="Picture-in-Picture">' +
-              '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 7H9c-1.1 0-2 .9-2 2v3H5v3h2v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H9v-3h4v-3h6v6z"/></svg>' +
-            '</button>' +
           '</div>' +
           '<div id="vdi-artist">Open a media tab</div>' +
           '<div id="vdi-prog-row">' +
@@ -53,6 +50,9 @@ VDI.UI = (function() {
             '<div id="vdi-ctrl-extra">' +
               '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>' +
+              '</button>' +
+              '<button class="vdi-icon-btn" id="vdi-pip-main-btn" title="Picture-in-Picture" style="display:none;">' +
+                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 7H9c-1.1 0-2 .9-2 2v3H5v3h2v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H9v-3h4v-3h6v6z"/></svg>' +
               '</button>' +
             '</div>' +
           '</div>' +
@@ -148,24 +148,69 @@ VDI.UI = (function() {
 
       setPlayIcon(state.isPlaying);
 
-      if (state.supportsPiP) $('vdi-pip-btn').classList.add('show');
-      else $('vdi-pip-btn').classList.remove('show');
+      if (state.supportsPiP && !state.isMusicApp) {
+        $('vdi-pip-main-btn').style.display = 'flex';
+      } else {
+        $('vdi-pip-main-btn').style.display = 'none';
+      }
+
+      if (state.isYouTubeVideo) {
+        $('vdi-lyr-btn').style.display = 'none';
+      } else {
+        $('vdi-lyr-btn').style.display = 'flex';
+      }
 
       // Album art
       if (state.artwork && (state.artwork !== state.lastArtwork || state.title !== state.lastArtTitle)) {
-        state.lastArtwork = state.artwork;
-        state.lastArtTitle = state.title;
-        var img = $('vdi-art-img');
-        img.classList.remove('ok');
-        img.src = state.artwork;
-        img.onload = function() {
-          img.classList.add('ok');
-          $('vdi-art-ph').style.display = 'none';
-        };
-        img.onerror = function() {
-          $('vdi-art-ph').style.display = 'flex';
-        };
-        VDI.Core.extractVibrant(state.artwork, applyTheme);
+        // If we already fetched high res for this exact title, and the background gave us the low res again, ignore it!
+        var skipArtUpdate = (state.highResFetchedFor === state.title && state.artwork.includes('i.ytimg.com'));
+
+        if (!skipArtUpdate) {
+          state.lastArtwork = state.artwork;
+          state.lastArtTitle = state.title;
+          var img = $('vdi-art-img');
+          img.classList.remove('ok');
+          
+          var loadImg = function(url) {
+            img.src = url;
+            img.onload = function() {
+              img.classList.add('ok');
+              $('vdi-art-ph').style.display = 'none';
+            };
+            img.onerror = function() {
+              $('vdi-art-ph').style.display = 'flex';
+            };
+          };
+
+          if (state.artwork.includes('i.ytimg.com') || state.artwork.includes('hqdefault')) {
+            loadImg(state.artwork); // Load low res first
+            if (VDI.Core.fetchHighResArt && state.highResFetchedFor !== state.title) {
+              state.highResFetchedFor = state.title; // Mark as fetched immediately to prevent race conditions
+              VDI.Core.fetchHighResArt(state.title, state.artist, function(highResUrl) {
+                if (highResUrl) {
+                  state.artwork = highResUrl;
+                  state.lastArtwork = highResUrl;
+                  // Swap to high res, color extractor will pick it up
+                  var tempImg = new Image();
+                  tempImg.onload = function() {
+                    img.src = highResUrl;
+                    VDI.Core.extractVibrant(tempImg, function(rgb) {
+                      if (rgb) {
+                        $('vdi').style.background = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+                      }
+                    });
+                  };
+                  tempImg.crossOrigin = 'Anonymous';
+                  tempImg.src = highResUrl;
+                }
+              });
+            }
+          } else {
+            loadImg(state.artwork);
+          }
+          
+          VDI.Core.extractVibrant(state.artwork, applyTheme);
+        }
       } else if (!state.artwork && state.lastArtwork) {
         state.lastArtwork = null;
         var im2 = $('vdi-art-img');
@@ -186,7 +231,7 @@ VDI.UI = (function() {
       state.lyricsIdx = -1;
       state.lyricsSynced = false;
 
-      $('vdi-lyr-btn').style.display = 'flex';
+      $('vdi-lyr-btn').style.display = state.isYouTubeVideo ? 'none' : 'flex';
       $('vdi-lyr-btn').classList.add('loading');
       $('vdi-lyr-btn').innerHTML = '<div class="vdi-loading-dots"><span></span><span></span><span></span></div>';
       $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">Loading lyrics...</div>';
@@ -240,7 +285,7 @@ VDI.UI = (function() {
           html += '<div class="' + cls + '" id="vdi-lyr-' + k + '" style="--line-dur: ' + duration + 's;">' + wordsHtml + transHtml + '</div>';
         }
         $('vdi-lyrics-scroll').innerHTML = html;
-        $('vdi-lyr-btn').style.display = 'flex';
+        $('vdi-lyr-btn').style.display = state.isYouTubeVideo ? 'none' : 'flex';
 
         if (state.lyricsOn) lyrPanel.classList.add('show');
 
@@ -379,9 +424,13 @@ VDI.UI = (function() {
         platform.sendAction(state.tabId, 'seek', state.position);
       });
 
-      $('vdi-pip-btn').addEventListener('click', function(e) {
+      $('vdi-pip-main-btn').addEventListener('click', function(e) {
         e.stopPropagation();
-        platform.requestPiP(state.tabId);
+        if (!opts.isVivaldi && typeof VDI !== 'undefined' && VDI.Core && VDI.Core.togglePiP) {
+          VDI.Core.togglePiP();
+        } else {
+          platform.requestPiP(state.tabId);
+        }
       });
 
       $('vdi-lyr-btn').addEventListener('click', function(e) {
@@ -456,6 +505,8 @@ VDI.UI = (function() {
       state.position = newState.position;
       state.supportsPiP = newState.supportsPiP;
       state.isFullscreen = newState.isFullscreen;
+      state.isYouTubeVideo = newState.isYouTubeVideo;
+      state.isMusicApp = newState.isMusicApp;
       state.tabId = newState.tabId !== undefined ? newState.tabId : state.tabId;
       state.windowId = newState.windowId !== undefined ? newState.windowId : state.windowId;
 

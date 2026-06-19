@@ -136,6 +136,32 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // High-Res Album Art Fetching (iTunes API)
+  // ─────────────────────────────────────────────────────────────
+  function fetchHighResArt(title, artist, cb) {
+    if (!title) return cb(null);
+    var cleanTitle = title.replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    var cleanArtist = (artist || '').replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    var term = encodeURIComponent(cleanTitle + ' ' + cleanArtist);
+    fetch('https://itunes.apple.com/search?term=' + term + '&media=music&limit=1')
+      .then(function(res) {
+        if (!res.ok) throw new Error('Bad status');
+        return res.json();
+      })
+      .then(function(data) {
+        if (data.results && data.results.length > 0 && data.results[0].artworkUrl100) {
+          var url = data.results[0].artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg');
+          cb(url);
+        } else {
+          cb(null);
+        }
+      })
+      .catch(function(e) {
+        cb(null);
+      });
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Lyrics fetching from lrclib.net
   // ─────────────────────────────────────────────────────────────
   var LYRICS_API = 'https://lrclib.net/api/search';
@@ -316,7 +342,9 @@ VDI.Core = (function() {
         hasMedia: !!(el || (ms && ms.metadata && ms.metadata.title)),
         volume: el ? el.volume : 1,
         pipOk: pipOk,
-        isFullscreen: !!document.fullscreenElement
+        isFullscreen: !!document.fullscreenElement,
+        isYouTubeVideo: location.hostname.includes('youtube.com') && !location.hostname.includes('music.youtube.com'),
+        isMusicApp: location.hostname.includes('music.youtube') || location.hostname.includes('spotify') || location.hostname.includes('soundcloud') || location.hostname.includes('music.apple')
       };
     } catch (e) {
       return null;
@@ -423,7 +451,63 @@ VDI.Core = (function() {
     } catch (e) {}
   }
 
-  function togglePiP() {
+  function togglePiP(originalTabId) {
+    function teleportBack() {
+      if (originalTabId) {
+        try {
+          if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+            chrome.runtime.sendMessage({ type: 'VDI_TELEPORT_BACK', tabId: originalTabId });
+          }
+        } catch (e) {}
+      }
+    }
+
+    function showPiPOverlay(videoElement) {
+      if (document.getElementById('vdi-pip-overlay')) return;
+      var overlay = document.createElement('div');
+      overlay.id = 'vdi-pip-overlay';
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.zIndex = '2147483647'; // Max z-index
+      overlay.style.cursor = 'pointer';
+      overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.backdropFilter = 'blur(5px)';
+      overlay.style.transition = 'opacity 0.2s';
+      
+      var msg = document.createElement('div');
+      msg.style.background = 'rgba(255, 255, 255, 0.1)';
+      msg.style.color = '#fff';
+      msg.style.padding = '20px 30px';
+      msg.style.borderRadius = '16px';
+      msg.style.fontFamily = 'system-ui, sans-serif';
+      msg.style.fontSize = '20px';
+      msg.style.fontWeight = '600';
+      msg.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+      msg.style.border = '1px solid rgba(255,255,255,0.2)';
+      msg.innerHTML = '<div style="margin-bottom:8px;font-size:24px;text-align:center;">🎬</div>Click anywhere to enter Picture-in-Picture';
+      
+      overlay.appendChild(msg);
+      
+      overlay.onclick = function() {
+        overlay.style.opacity = '0';
+        setTimeout(function() { overlay.remove(); }, 200);
+        try {
+          videoElement.requestPictureInPicture().then(function() {
+            teleportBack();
+          }).catch(function() {
+            teleportBack();
+          });
+        } catch (e) {
+          teleportBack();
+        }
+      };
+      
+      document.body.appendChild(overlay);
+    }
+
     try {
       var vids = Array.prototype.slice.call(document.querySelectorAll('video'));
       var v = null;
@@ -437,13 +521,27 @@ VDI.Core = (function() {
       if (!v || !document.pictureInPictureEnabled) return false;
 
       if (document.pictureInPictureElement) {
-        document.exitPictureInPicture();
-      } else {
-        v.requestPictureInPicture();
+        document.exitPictureInPicture().then(function() {
+          teleportBack();
+        }).catch(function() {
+          teleportBack();
+        });
+        return true;
+      }
+
+      // Try direct first (works in Chrome Extension with user gesture)
+      var promise = v.requestPictureInPicture();
+      if (promise && promise.catch) {
+        promise.then(function() {
+          teleportBack();
+        }).catch(function(err) {
+          showPiPOverlay(v);
+        });
       }
       return true;
     } catch (e) {
-      return false;
+      showPiPOverlay(v);
+      return true;
     }
   }
 

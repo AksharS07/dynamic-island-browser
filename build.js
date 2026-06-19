@@ -121,6 +121,8 @@ function buildVivaldi() {
           duration: res.duration || 0,
           position: res.position || 0,
           supportsPiP: res.pipOk || false,
+          isYouTubeVideo: res.isYouTubeVideo || false,
+          isMusicApp: res.isMusicApp || false,
           isFullscreen: res.isFullscreen || false,
           tabId: tab.id,
           windowId: tab.windowId

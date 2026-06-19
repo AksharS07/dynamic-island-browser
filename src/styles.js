@@ -100,34 +100,21 @@ VDI.Styles = (function() {
     // Album Art
     rules.push(
       '#vdi-art{',
-        'width:74px;height:74px;border-radius:14px;flex-shrink:0;overflow:hidden;isolation:isolate;',
+        'width:74px !important;height:74px !important;min-width:74px !important;min-height:74px !important;border-radius:14px !important;flex-shrink:0 !important;overflow:hidden !important;isolation:isolate !important;box-sizing:border-box !important;padding:0 !important;margin:0 !important;border:none !important;',
         'background:var(--vdi-grad,' + gradient + ');',
         'box-shadow:0 4px 20px rgba(0,0,0,.5);',
         'display:flex;align-items:center;justify-content:center;position:relative;',
         'transition:background .7s ease;',
       '}'
     );
-    rules.push('#vdi-art img{position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;border-radius:14px;opacity:0;transition:opacity .4s ease;}');
-    rules.push('#vdi-art img.ok{opacity:1;}');
+    rules.push('#vdi-art img{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;max-width:100% !important;max-height:100% !important;object-fit:cover !important;border-radius:14px !important;opacity:0;transition:opacity .4s ease;box-sizing:border-box !important;padding:0 !important;margin:0 !important;border:none !important;display:block !important;min-width:100% !important;min-height:100% !important;}');
+    rules.push('#vdi-art img.ok{opacity:1 !important;}');
     rules.push('#vdi-art-ph{font-size:28px;line-height:1;}');
 
     // Track Info
     rules.push('#vdi-track{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}');
     rules.push('#vdi-title-row{display:flex;align-items:center;gap:6px;min-width:0;}');
     rules.push('#vdi-title{flex:1;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
-
-    // PiP Button
-    rules.push(
-      '#vdi-pip-btn{',
-        'width:22px;height:22px;border-radius:6px;border:none;background:rgba(255,255,255,.07);',
-        'color:rgba(255,255,255,.55);display:none;align-items:center;justify-content:center;',
-        'cursor:pointer;flex-shrink:0;',
-        'transition:background .2s,color .2s,transform .15s;',
-      '}'
-    );
-    rules.push('#vdi-pip-btn.show{display:flex;}');
-    rules.push('#vdi-pip-btn:hover{background: #fff;transform:scale(1.1);}');
-    rules.push('#vdi-pip-btn svg{width:13px;height:13px;pointer-events:none;}');
 
     rules.push('#vdi-artist{font-size:11px;color:rgba(255,255,255,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
 

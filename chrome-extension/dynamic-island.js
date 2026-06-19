@@ -136,6 +136,32 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // High-Res Album Art Fetching (iTunes API)
+  // ─────────────────────────────────────────────────────────────
+  function fetchHighResArt(title, artist, cb) {
+    if (!title) return cb(null);
+    var cleanTitle = title.replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    var cleanArtist = (artist || '').replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
+    var term = encodeURIComponent(cleanTitle + ' ' + cleanArtist);
+    fetch('https://itunes.apple.com/search?term=' + term + '&media=music&limit=1')
+      .then(function(res) {
+        if (!res.ok) throw new Error('Bad status');
+        return res.json();
+      })
+      .then(function(data) {
+        if (data.results && data.results.length > 0 && data.results[0].artworkUrl100) {
+          var url = data.results[0].artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg');
+          cb(url);
+        } else {
+          cb(null);
+        }
+      })
+      .catch(function(e) {
+        cb(null);
+      });
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Lyrics fetching from lrclib.net
   // ─────────────────────────────────────────────────────────────
   var LYRICS_API = 'https://lrclib.net/api/search';
@@ -316,7 +342,9 @@ VDI.Core = (function() {
         hasMedia: !!(el || (ms && ms.metadata && ms.metadata.title)),
         volume: el ? el.volume : 1,
         pipOk: pipOk,
-        isFullscreen: !!document.fullscreenElement
+        isFullscreen: !!document.fullscreenElement,
+        isYouTubeVideo: location.hostname.includes('youtube.com') && !location.hostname.includes('music.youtube.com'),
+        isMusicApp: location.hostname.includes('music.youtube') || location.hostname.includes('spotify') || location.hostname.includes('soundcloud') || location.hostname.includes('music.apple')
       };
     } catch (e) {
       return null;
@@ -423,7 +451,63 @@ VDI.Core = (function() {
     } catch (e) {}
   }
 
-  function togglePiP() {
+  function togglePiP(originalTabId) {
+    function teleportBack() {
+      if (originalTabId) {
+        try {
+          if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+            chrome.runtime.sendMessage({ type: 'VDI_TELEPORT_BACK', tabId: originalTabId });
+          }
+        } catch (e) {}
+      }
+    }
+
+    function showPiPOverlay(videoElement) {
+      if (document.getElementById('vdi-pip-overlay')) return;
+      var overlay = document.createElement('div');
+      overlay.id = 'vdi-pip-overlay';
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.zIndex = '2147483647'; // Max z-index
+      overlay.style.cursor = 'pointer';
+      overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.backdropFilter = 'blur(5px)';
+      overlay.style.transition = 'opacity 0.2s';
+      
+      var msg = document.createElement('div');
+      msg.style.background = 'rgba(255, 255, 255, 0.1)';
+      msg.style.color = '#fff';
+      msg.style.padding = '20px 30px';
+      msg.style.borderRadius = '16px';
+      msg.style.fontFamily = 'system-ui, sans-serif';
+      msg.style.fontSize = '20px';
+      msg.style.fontWeight = '600';
+      msg.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+      msg.style.border = '1px solid rgba(255,255,255,0.2)';
+      msg.innerHTML = '<div style="margin-bottom:8px;font-size:24px;text-align:center;">🎬</div>Click anywhere to enter Picture-in-Picture';
+      
+      overlay.appendChild(msg);
+      
+      overlay.onclick = function() {
+        overlay.style.opacity = '0';
+        setTimeout(function() { overlay.remove(); }, 200);
+        try {
+          videoElement.requestPictureInPicture().then(function() {
+            teleportBack();
+          }).catch(function() {
+            teleportBack();
+          });
+        } catch (e) {
+          teleportBack();
+        }
+      };
+      
+      document.body.appendChild(overlay);
+    }
+
     try {
       var vids = Array.prototype.slice.call(document.querySelectorAll('video'));
       var v = null;
@@ -437,13 +521,27 @@ VDI.Core = (function() {
       if (!v || !document.pictureInPictureEnabled) return false;
 
       if (document.pictureInPictureElement) {
-        document.exitPictureInPicture();
-      } else {
-        v.requestPictureInPicture();
+        document.exitPictureInPicture().then(function() {
+          teleportBack();
+        }).catch(function() {
+          teleportBack();
+        });
+        return true;
+      }
+
+      // Try direct first (works in Chrome Extension with user gesture)
+      var promise = v.requestPictureInPicture();
+      if (promise && promise.catch) {
+        promise.then(function() {
+          teleportBack();
+        }).catch(function(err) {
+          showPiPOverlay(v);
+        });
       }
       return true;
     } catch (e) {
-      return false;
+      showPiPOverlay(v);
+      return true;
     }
   }
 
@@ -564,34 +662,21 @@ VDI.Styles = (function() {
     // Album Art
     rules.push(
       '#vdi-art{',
-        'width:74px;height:74px;border-radius:14px;flex-shrink:0;overflow:hidden;isolation:isolate;',
+        'width:74px !important;height:74px !important;min-width:74px !important;min-height:74px !important;border-radius:14px !important;flex-shrink:0 !important;overflow:hidden !important;isolation:isolate !important;box-sizing:border-box !important;padding:0 !important;margin:0 !important;border:none !important;',
         'background:var(--vdi-grad,' + gradient + ');',
         'box-shadow:0 4px 20px rgba(0,0,0,.5);',
         'display:flex;align-items:center;justify-content:center;position:relative;',
         'transition:background .7s ease;',
       '}'
     );
-    rules.push('#vdi-art img{position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;border-radius:14px;opacity:0;transition:opacity .4s ease;}');
-    rules.push('#vdi-art img.ok{opacity:1;}');
+    rules.push('#vdi-art img{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;max-width:100% !important;max-height:100% !important;object-fit:cover !important;border-radius:14px !important;opacity:0;transition:opacity .4s ease;box-sizing:border-box !important;padding:0 !important;margin:0 !important;border:none !important;display:block !important;min-width:100% !important;min-height:100% !important;}');
+    rules.push('#vdi-art img.ok{opacity:1 !important;}');
     rules.push('#vdi-art-ph{font-size:28px;line-height:1;}');
 
     // Track Info
     rules.push('#vdi-track{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}');
     rules.push('#vdi-title-row{display:flex;align-items:center;gap:6px;min-width:0;}');
     rules.push('#vdi-title{flex:1;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
-
-    // PiP Button
-    rules.push(
-      '#vdi-pip-btn{',
-        'width:22px;height:22px;border-radius:6px;border:none;background:rgba(255,255,255,.07);',
-        'color:rgba(255,255,255,.55);display:none;align-items:center;justify-content:center;',
-        'cursor:pointer;flex-shrink:0;',
-        'transition:background .2s,color .2s,transform .15s;',
-      '}'
-    );
-    rules.push('#vdi-pip-btn.show{display:flex;}');
-    rules.push('#vdi-pip-btn:hover{background: #fff;transform:scale(1.1);}');
-    rules.push('#vdi-pip-btn svg{width:13px;height:13px;pointer-events:none;}');
 
     rules.push('#vdi-artist{font-size:11px;color:rgba(255,255,255,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}');
 
@@ -835,9 +920,16 @@ VDI.Platform.ChromeExt = (function() {
                 broadcastState();
                 return;
               }
+              S.title = res.title || S.title;
+              S.artist = res.artist || S.artist;
+              S.artwork = res.artwork || S.artwork;
               S.isPlaying = res.isPlaying;
-              S.position = res.position;
               S.duration = res.duration;
+              S.position = res.position;
+              S.supportsPiP = res.pipOk || false;
+              S.isFullscreen = res.isFullscreen || false;
+              S.isYouTubeVideo = res.isYouTubeVideo || false;
+              S.isMusicApp = res.isMusicApp || false;
               if (!res.hasMedia) S.hasMedia = false;
               broadcastState();
             });
@@ -866,6 +958,8 @@ VDI.Platform.ChromeExt = (function() {
           S.duration = res.duration || 0;
           S.position = res.position || 0;
           S.supportsPiP = res.pipOk || false;
+          S.isYouTubeVideo = res.isYouTubeVideo || false;
+          S.isMusicApp = res.isMusicApp || false;
 
           broadcastState();
         });
@@ -962,9 +1056,6 @@ VDI.UI = (function() {
         '<div id="vdi-track">' +
           '<div id="vdi-title-row">' +
             '<div id="vdi-title">No media</div>' +
-            '<button id="vdi-pip-btn" title="Picture-in-Picture">' +
-              '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 7H9c-1.1 0-2 .9-2 2v3H5v3h2v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H9v-3h4v-3h6v6z"/></svg>' +
-            '</button>' +
           '</div>' +
           '<div id="vdi-artist">Open a media tab</div>' +
           '<div id="vdi-prog-row">' +
@@ -981,6 +1072,9 @@ VDI.UI = (function() {
             '<div id="vdi-ctrl-extra">' +
               '<button class="vdi-icon-btn" id="vdi-lyr-btn" title="Lyrics">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>' +
+              '</button>' +
+              '<button class="vdi-icon-btn" id="vdi-pip-main-btn" title="Picture-in-Picture" style="display:none;">' +
+                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 7H9c-1.1 0-2 .9-2 2v3H5v3h2v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H9v-3h4v-3h6v6z"/></svg>' +
               '</button>' +
             '</div>' +
           '</div>' +
@@ -1076,24 +1170,69 @@ VDI.UI = (function() {
 
       setPlayIcon(state.isPlaying);
 
-      if (state.supportsPiP) $('vdi-pip-btn').classList.add('show');
-      else $('vdi-pip-btn').classList.remove('show');
+      if (state.supportsPiP && !state.isMusicApp) {
+        $('vdi-pip-main-btn').style.display = 'flex';
+      } else {
+        $('vdi-pip-main-btn').style.display = 'none';
+      }
+
+      if (state.isYouTubeVideo) {
+        $('vdi-lyr-btn').style.display = 'none';
+      } else {
+        $('vdi-lyr-btn').style.display = 'flex';
+      }
 
       // Album art
       if (state.artwork && (state.artwork !== state.lastArtwork || state.title !== state.lastArtTitle)) {
-        state.lastArtwork = state.artwork;
-        state.lastArtTitle = state.title;
-        var img = $('vdi-art-img');
-        img.classList.remove('ok');
-        img.src = state.artwork;
-        img.onload = function() {
-          img.classList.add('ok');
-          $('vdi-art-ph').style.display = 'none';
-        };
-        img.onerror = function() {
-          $('vdi-art-ph').style.display = 'flex';
-        };
-        VDI.Core.extractVibrant(state.artwork, applyTheme);
+        // If we already fetched high res for this exact title, and the background gave us the low res again, ignore it!
+        var skipArtUpdate = (state.highResFetchedFor === state.title && state.artwork.includes('i.ytimg.com'));
+
+        if (!skipArtUpdate) {
+          state.lastArtwork = state.artwork;
+          state.lastArtTitle = state.title;
+          var img = $('vdi-art-img');
+          img.classList.remove('ok');
+          
+          var loadImg = function(url) {
+            img.src = url;
+            img.onload = function() {
+              img.classList.add('ok');
+              $('vdi-art-ph').style.display = 'none';
+            };
+            img.onerror = function() {
+              $('vdi-art-ph').style.display = 'flex';
+            };
+          };
+
+          if (state.artwork.includes('i.ytimg.com') || state.artwork.includes('hqdefault')) {
+            loadImg(state.artwork); // Load low res first
+            if (VDI.Core.fetchHighResArt && state.highResFetchedFor !== state.title) {
+              state.highResFetchedFor = state.title; // Mark as fetched immediately to prevent race conditions
+              VDI.Core.fetchHighResArt(state.title, state.artist, function(highResUrl) {
+                if (highResUrl) {
+                  state.artwork = highResUrl;
+                  state.lastArtwork = highResUrl;
+                  // Swap to high res, color extractor will pick it up
+                  var tempImg = new Image();
+                  tempImg.onload = function() {
+                    img.src = highResUrl;
+                    VDI.Core.extractVibrant(tempImg, function(rgb) {
+                      if (rgb) {
+                        $('vdi').style.background = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+                      }
+                    });
+                  };
+                  tempImg.crossOrigin = 'Anonymous';
+                  tempImg.src = highResUrl;
+                }
+              });
+            }
+          } else {
+            loadImg(state.artwork);
+          }
+          
+          VDI.Core.extractVibrant(state.artwork, applyTheme);
+        }
       } else if (!state.artwork && state.lastArtwork) {
         state.lastArtwork = null;
         var im2 = $('vdi-art-img');
@@ -1114,7 +1253,7 @@ VDI.UI = (function() {
       state.lyricsIdx = -1;
       state.lyricsSynced = false;
 
-      $('vdi-lyr-btn').style.display = 'flex';
+      $('vdi-lyr-btn').style.display = state.isYouTubeVideo ? 'none' : 'flex';
       $('vdi-lyr-btn').classList.add('loading');
       $('vdi-lyr-btn').innerHTML = '<div class="vdi-loading-dots"><span></span><span></span><span></span></div>';
       $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">Loading lyrics...</div>';
@@ -1168,7 +1307,7 @@ VDI.UI = (function() {
           html += '<div class="' + cls + '" id="vdi-lyr-' + k + '" style="--line-dur: ' + duration + 's;">' + wordsHtml + transHtml + '</div>';
         }
         $('vdi-lyrics-scroll').innerHTML = html;
-        $('vdi-lyr-btn').style.display = 'flex';
+        $('vdi-lyr-btn').style.display = state.isYouTubeVideo ? 'none' : 'flex';
 
         if (state.lyricsOn) lyrPanel.classList.add('show');
 
@@ -1307,9 +1446,13 @@ VDI.UI = (function() {
         platform.sendAction(state.tabId, 'seek', state.position);
       });
 
-      $('vdi-pip-btn').addEventListener('click', function(e) {
+      $('vdi-pip-main-btn').addEventListener('click', function(e) {
         e.stopPropagation();
-        platform.requestPiP(state.tabId);
+        if (!opts.isVivaldi && typeof VDI !== 'undefined' && VDI.Core && VDI.Core.togglePiP) {
+          VDI.Core.togglePiP();
+        } else {
+          platform.requestPiP(state.tabId);
+        }
       });
 
       $('vdi-lyr-btn').addEventListener('click', function(e) {
@@ -1384,6 +1527,8 @@ VDI.UI = (function() {
       state.position = newState.position;
       state.supportsPiP = newState.supportsPiP;
       state.isFullscreen = newState.isFullscreen;
+      state.isYouTubeVideo = newState.isYouTubeVideo;
+      state.isMusicApp = newState.isMusicApp;
       state.tabId = newState.tabId !== undefined ? newState.tabId : state.tabId;
       state.windowId = newState.windowId !== undefined ? newState.windowId : state.windowId;
 
