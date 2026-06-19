@@ -15,83 +15,56 @@ There are two versions:
 
 ---
 
+## Features
+
+- **Media Playback Control:** Play, pause, skip, and scrub through tracks directly from the island. Double-click the island to jump directly to the media tab.
+- **Time-Synced Lyrics:** Fetches and displays beautifully animated, time-synced lyrics in their original language (no translations). Click any lyric line to instantly seek to that part of the song!
+- **Auto-Collapse & Idle State:** Expands on hover to show album art and controls. When inactive, it automatically shrinks into a tiny, unobtrusive dot so it stays completely out of your way.
+- **Audio Visualizer:** Features a built-in EQ visualizer animation while music is playing (Static Visualizer).
+- **Picture-in-Picture (PiP):** Includes a toggle at the top-right of the island to pop out the currently playing video into PiP mode (note: PiP reliability varies depending on the website).
+- **Vibrant Theming:** Automatically extracts the dominant color from the album art and seamlessly themes the entire island—background, glow, accent, and progress bar—to match perfectly.
+
+---
+
+## Steps to Download & Install
+
+### For Vivaldi only:
+1. Close Vivaldi completely.
+2. Clone or download the **source code / repository**.
+3. Right-click `UPDATE (Run as Admin).bat` and select **Run as Administrator**.
+4. The script will automatically find your Vivaldi installation, inject the Dynamic Island (`dynamic-island.js`), and relaunch the browser for you.
+
+*(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
+
+### Installing the Chrome / Edge Extension:
+1. Download the **`dynamic-island-extension.zip`** release file.
+2. Extract the folder to a safe location on your computer.
+3. Open `chrome://extensions` (or `edge://extensions`).
+4. Enable **Developer Mode** using the toggle in the top right.
+5. Click **Load unpacked** and select the folder you extracted.
+
+No build step, no dependencies, no account required.
+
+---
+
 ## How this was actually built
 
 I am a 2nd-year CS/IoT/Cybersecurity engineering student. I do not enjoy frontend development. I did not write the HTML, CSS, or JS syntax for this project — that was handled by agentic AI (Google's Antigravity 2.0 and Claude).
 
 What I did do: defined the product, made every architectural decision, and acted as QA throughout. I caught bugs the AI missed repeatedly — a silent `ReferenceError` that was killing color theming entirely, a JavaScript closure bug that bound every lyrics click listener to the last line instead of the correct one, a `Promise.catch()` call that crashed silently on certain Chromium versions. The AI generated code; I decided what the code was supposed to do and whether it actually did it.
 
-This is what AI-assisted development actually looks like in practice. It is not magic. It is a lot of iterative debugging and knowing when the output is wrong.
+This is what AI-assisted development actually looks like in practice. It is a lot of iterative debugging and knowing when the output is wrong.
 
 ---
 
-## Features
+## Known Limitations & Technical Challenges
 
-- Collapses to a small pill showing the track name and an EQ visualizer. Expands on hover to show album art, artist, progress bar, and playback controls.
-- Extracts the dominant color from album art using canvas pixel sampling and themes the entire island to match — background, glow, accent, progress bar.
-- Fetches time-synced lyrics from lrclib.net and displays them in a glassmorphic floating panel below the island. Click any line to seek to that timestamp.
-- Shrinks to a barely-visible dot after 9 seconds of inactivity so it stays out of your way.
-- Double-click the island to jump directly to the media tab.
-- PiP button appears automatically when the active tab supports Picture-in-Picture (hidden on YouTube Music where it does not make sense).
-
----
-
-## Technical challenges worth mentioning
-
-**The YouTube Music dual-video problem**
-
-YouTube Music loads both an audio-only stream and a full music video simultaneously in the background. Standard `<video>` element scraping returns the wrong duration — sometimes by several minutes — because it reads from the hidden video file, not the audio track the user is actually hearing. The fix was to scrape the human-readable timestamp text directly from YouTube Music's UI (the `0:32 / 3:59` element), parse it, and use the difference between the UI time and the video element's `currentTime` as a mathematical offset when seeking. It is not elegant but it works reliably.
-
-**Chromium background tab throttling**
-
-When the media tab is not in focus, Chromium aggressively throttles its JavaScript execution to conserve CPU. This caused skip and pause commands to lag by 1–2 seconds even though the command itself fired instantly. The fix for the Vivaldi mod was to whitelist the media site in Chromium's performance settings (`chrome://settings/performance`) so it never gets throttled regardless of focus state. The Chrome Extension version handles this through rapid sequential polls after any user action.
-
-**Background/content script architecture in the Chrome Extension**
-
-Content scripts do not have access to `chrome.tabs` or `chrome.scripting`. The extension had to be split into a background service worker that handles all tab querying and media state polling, and a content script that handles only the UI. They communicate via `chrome.runtime.sendMessage` and `chrome.runtime.onMessage`. Getting the message passing correct in both directions, handling cases where the listener does not exist yet, and avoiding the `Promise.catch()` pattern that breaks on older Chromium builds took more effort than expected.
-
-**Windows registry and installation path conflicts**
-
-The Vivaldi mod installer had to navigate Vivaldi's Crashpad process holding named pipe handles as Administrator ghost processes, which caused standard file operations to fail silently. The PowerShell installer force-kills all Chromium-related background processes, backs up `browser.html` before patching it, and uses `explorer.exe` as a proxy to relaunch the browser under the standard user account rather than the elevated Administrator context.
-
----
-
-## Installing the Vivaldi Mod
-
-**For Windows:**
-1. Close Vivaldi completely.
-2. Clone or download this repository.
-3. Right-click `UPDATE (Run as Admin).bat` and select Run as Administrator.
-4. The script will find your Vivaldi installation, back up `browser.html`, inject `dynamic-island.js`, and relaunch the browser.
-
-**For Linux (Ubuntu/Debian):**
-1. Close Vivaldi completely.
-2. Open a terminal in this repository.
-3. Make the script executable: `chmod +x install.sh`
-4. Run the installer: `sudo ./install.sh`
-5. The script will find Vivaldi in `/opt/vivaldi`, back up `window.html`, inject the mod, and finish.
-
-You will need to re-run this after Vivaldi major version updates since they overwrite the core HTML files.
-
----
-
-## Installing the Chrome Extension
-
-1. Clone or download this repository.
-2. Open `chrome://extensions` (or `edge://extensions`).
-3. Enable Developer Mode using the toggle in the top right.
-4. Click Load unpacked and select the `chrome-extension` folder inside this repository.
-
-No build step, no dependencies, no account required.
-
----
-
-## Known limitations
-
-- The EQ visualizer in the collapsed pill animates randomly rather than reacting to actual audio. There is no browser API that exposes raw audio waveform data from an arbitrary tab to an external script. A fake animation was the only option.
-- Lyrics availability depends entirely on lrclib.net's database. Songs in regional languages work surprisingly well; obscure tracks often do not.
-- The Chrome Extension cannot appear on `chrome://` internal pages or the new tab page due to browser security restrictions. It works on every normal webpage.
-- Color extraction occasionally picks a muted or inaccurate color depending on the album art composition. The algorithm clusters pixels by hue and picks the most saturated cluster, which works well on most artwork but not all.
+- **Fake Visualizer:** The EQ visualizer animates randomly rather than reacting to actual audio. There is no browser API that securely exposes raw audio waveform data from an arbitrary tab to an external script. 
+- **Lyrics Availability:** Depends entirely on lrclib.net's database. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. Lyrics are strictly in the original language.
+- **YouTube Music Dual-Video Bug:** YouTube Music loads an audio-only stream and a hidden music video simultaneously. The island scrapes the UI time instead of relying purely on video element duration to prevent seeking bugs.
+- **Chromium Throttling:** When the media tab isn't focused, Chromium aggressively throttles its JavaScript, which can cause 1–2s lag when skipping tracks.
+- **Extension Restrictions:** The Chrome Extension cannot appear on `chrome://` internal pages or the new tab page due to browser security restrictions. It works on every normal webpage.
+- **Color Extraction:** Occasionally picks a muted color depending on album art composition, though this has been optimized.
 
 ---
 
@@ -103,16 +76,16 @@ The codebase is modularized in `src/` for easier maintenance:
 src/
   core.js           # Shared: time formatting, color extraction, lyrics API
   styles.js         # CSS generation with configurability
-  ui.js              # DOM creation and controller logic
+  ui.js             # DOM creation and controller logic
   platform/
     vivaldi.js      # Vivaldi-specific APIs
     chrome-ext.js   # Chrome Extension messaging
 ```
 
-Run `node build.js` to regenerate the output files. No bundler, no dependencies required.
+Run `node build.js` to regenerate the output files and the release `.zip` archive. No bundler required.
 
 ---
 
 ## Contributions
 
-Pull requests welcome. The modular structure makes it much easier to work with now — CSS edits in `src/styles.js`, core logic in `src/core.js`, platform-specific code in `src/platform/`.
+Pull requests are highly welcome. The modular structure makes it easy to work with: CSS edits belong in `src/styles.js`, core logic in `src/core.js`, and browser-specific code in `src/platform/`.
