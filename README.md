@@ -1,11 +1,17 @@
-# Dynamic Island for Browsers
+# Dynamic Island for Browsers (V1.2)
 
-A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background.
+<p align="center">
+  <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
+</p>
+
+A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background (Currently supports YouTube & YouTube Music).
 
 There are two versions:
 
 - **Vivaldi Mod** — lives natively in Vivaldi's title bar, works across every tab including settings and new tab pages. Looks and feels like it belongs there.
 - **Chrome Extension** — works on Chrome, Edge, Brave, or any Chromium browser. Sits as a fixed overlay at the top of every webpage. Less native-looking, but anyone can install it in 30 seconds without touching their browser's internals.
+
+## In Action 🎬
 
 ### Vivaldi — Native title bar mod
 ![Vivaldi Demo](vivaldi-demo.gif)
@@ -13,17 +19,33 @@ There are two versions:
 ### Chrome / Edge — Unpacked extension
 ![Edge Demo](edge-demo.gif)
 
+## Screenshots 📸
+
+<p align="center">
+  <img src="edge working image.png" width="48%">
+  <img src="yt-video screenshot.png" width="48%">
+</p>
+
+---
+
+## What's New in V1.2 🚀
+
+- **Cinematic Lyrics:** Lyrics now feature a stunning, ultra-smooth full-line glow animation that naturally fades into focus instead of a harsh word-by-word sweep.
+- **Universal Picture-in-Picture:** Improved PiP integration instantly teleports you between tabs to flawlessly bypass browser security blocks across both Vivaldi and the standard extension! Pop out your video from any tab, anytime.
+- **Zero Jitter Engine:** The playback progress bar is now mathematically smoothed to perfectly glide across your screen, completely eliminating rubber-banding and lag caused by background tab throttling.
+- **Smart Caching & Unified Tools:** Opening new tabs will now load lyrics instantly from memory! The lyrics panel also features a sleek, transparent floating Romanization toggle.
+
 ---
 
 ## Features
 
 - **Media Playback Control:** Play, pause, skip, and scrub through tracks directly from the island. Double-click the island to jump directly to the media tab.
-- **Time-Synced Lyrics:** Fetches and displays beautifully animated, time-synced lyrics in their original language (no translations). Click any lyric line to instantly seek to that part of the song!
-- **High-Res Artwork Injection:** Automatically cross-references YouTube and Spotify tracks with the Apple Music API to fetch crisp, high-resolution album art, complete with a tiny Apple Music indicator!
+- **Time-Synced Lyrics & Romanization:** Fetches beautifully animated, time-synced lyrics in their original language. For non-Latin scripts (Japanese, Korean, Chinese, etc.), click the floating orb to silently query the Google Translate API and instantly provide highly accurate Romanization underneath! Click any lyric line to instantly seek to that part of the song.
+- **Instrumental Progress Bar:** During instrumental sections (♪/♫), the lyrics panel displays a buttery-smooth music note that fills up seamlessly like a progress bar, perfectly synced to the duration of the instrumental break.
+- **High-Res Artwork Injection:** Automatically cross-references YouTube and Spotify tracks with the Apple Music API to fetch crisp, high-resolution album art!
 - **Auto-Collapse & Idle State:** Expands on hover to show album art and controls. When inactive, it automatically shrinks into a tiny, unobtrusive dot so it stays completely out of your way.
-- **Audio Visualizer:** Features a built-in EQ visualizer animation while music is playing (Static Visualizer).
-- **Context-Aware PiP & Icons:** Includes a Picture-in-Picture (PiP) button. On standard YouTube videos, the lyrics icon intelligently hides itself to give priority to the PiP button. 
-- **Vivaldi PiP Teleportation Hack:** Because Vivaldi mods live outside the webpage, Chromium blocks PiP. The Vivaldi Mod uses a custom "Teleportation Hack" that instantly teleports you to the video tab, drops a glass overlay, and teleports you back the moment you click it, bypassing Chromium's strict user gesture requirement!
+- **Context-Aware PiP:** Includes a Picture-in-Picture (PiP) button. On standard YouTube videos, the lyrics icon intelligently hides itself to give priority to the PiP button. 
+- **Universal PiP Teleportation Hack:** Because standard browser extensions and mods operate under strict cross-origin security rules, Chromium natively blocks programmatic PiP requests from different tabs. The island uses a custom "Teleportation Hack" that instantly teleports you to the video tab, triggers PiP, and seamlessly teleports you right back!
 - **Vibrant Theming:** Automatically extracts the dominant color from the album art and seamlessly themes the entire island—background, glow, accent, and progress bar—to match perfectly.
 
 ---
@@ -39,7 +61,7 @@ There are two versions:
 *(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
 
 ### Installing the Chrome / Edge Extension:
-1. Download the **`dynamic-island-extension.zip`** release file.
+1. Download the latest **`dynamic-island-extension-v1.2.zip`** release file.
 2. Extract the folder to a safe location on your computer.
 3. Open `chrome://extensions` (or `edge://extensions`).
 4. Enable **Developer Mode** using the toggle in the top right.
@@ -61,11 +83,11 @@ This is what AI-assisted development actually looks like in practice. It is a lo
 
 ## Known Limitations & Technical Challenges
 
+- **Platform Support:** Currently heavily optimized and actively tested *only* for YouTube and YouTube Music. Support for other platforms like Spotify and Apple Music is a work in progress.
 - **Fake Visualizer:** The EQ visualizer animates randomly rather than reacting to actual audio. There is no browser API that securely exposes raw audio waveform data from an arbitrary tab to an external script. 
-- **Lyrics Availability:** Depends entirely on lrclib.net's database. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. Lyrics are strictly in the original language.
-- **YouTube Music Dual-Video Bug:** YouTube Music loads an audio-only stream and a hidden music video simultaneously. The island scrapes the UI time instead of relying purely on video element duration to prevent seeking bugs.
-- **Chromium Throttling:** When the media tab isn't focused, Chromium aggressively throttles its JavaScript, which can cause 1–2s lag when skipping tracks.
-- **Extension Restrictions:** The Chrome Extension cannot appear on `chrome://` internal pages or the new tab page due to browser security restrictions. It works on every normal webpage.
+- **Lyrics Availability:** Depends entirely on lrclib.net's database. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. While translations are not provided, accurate romanization is fetched on-the-fly.
+- **Chromium Throttling:** When the media tab isn't focused, Chromium aggressively throttles its JavaScript, which can cause minor desyncs or lag when skipping tracks.
+- **Extension Restrictions:** The Chrome Extension cannot appear on `chrome://` internal pages, the new tab page, or heavily restricted Web Store pages due to browser security restrictions. It works on every normal webpage.
 - **Color Extraction:** Occasionally picks a muted color depending on album art composition, though this has been optimized.
 
 ---

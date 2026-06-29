@@ -75,9 +75,14 @@ function buildVivaldi() {
 
   ctrl.init();
 
-  // Media polling for Vivaldi
-  var pollInterval = 1500;
-  var pollTimer = null;
+  function scheduleNextPoll() {
+    var state = ctrl.getState();
+    var delay = 3000;
+    if (state.hasMedia) {
+      delay = state.isPlaying ? 1000 : 2000;
+    }
+    pollTimer = setTimeout(poll, delay);
+  }
 
   function poll() {
     VDI.Platform.Vivaldi.pollMedia(function(tab) {
@@ -88,17 +93,19 @@ function buildVivaldi() {
           VDI.Platform.Vivaldi.getMediaStateFromTab(state.tabId, function(res) {
             if (!res) {
               ctrl.setState({ hasMedia: false });
-              return;
+            } else {
+              ctrl.setState({
+                isPlaying: res.isPlaying,
+                position: res.position,
+                duration: res.duration,
+                hasMedia: res.hasMedia
+              });
             }
-            ctrl.setState({
-              isPlaying: res.isPlaying,
-              position: res.position,
-              duration: res.duration,
-              hasMedia: res.hasMedia
-            });
+            scheduleNextPoll();
           });
-        } else if (state.hasMedia) {
-          ctrl.setState({ hasMedia: false });
+        } else {
+          if (state.hasMedia) ctrl.setState({ hasMedia: false });
+          scheduleNextPoll();
         }
         return;
       }
@@ -109,30 +116,29 @@ function buildVivaldi() {
       VDI.Platform.Vivaldi.getMediaStateFromTab(tab.id, function(res) {
         if (!res) {
           ctrl.setState({ hasMedia: true, tabId: tab.id, windowId: tab.windowId });
-          return;
+        } else {
+          ctrl.setState({
+            hasMedia: res.hasMedia || true,
+            isPlaying: res.isPlaying,
+            title: res.title || tab.title || '',
+            artist: res.artist || '',
+            artwork: res.artwork,
+            duration: res.duration || 0,
+            position: res.position || 0,
+            supportsPiP: res.pipOk || false,
+            isYouTubeVideo: res.isYouTubeVideo || false,
+            isMusicApp: res.isMusicApp || false,
+            isFullscreen: res.isFullscreen || false,
+            tabId: tab.id,
+            windowId: tab.windowId
+          });
         }
-
-        ctrl.setState({
-          hasMedia: res.hasMedia || true,
-          isPlaying: res.isPlaying,
-          title: res.title || tab.title || '',
-          artist: res.artist || '',
-          artwork: res.artwork,
-          duration: res.duration || 0,
-          position: res.position || 0,
-          supportsPiP: res.pipOk || false,
-          isYouTubeVideo: res.isYouTubeVideo || false,
-          isMusicApp: res.isMusicApp || false,
-          isFullscreen: res.isFullscreen || false,
-          tabId: tab.id,
-          windowId: tab.windowId
-        });
+        scheduleNextPoll();
       });
     });
   }
 
   poll();
-  setInterval(poll, pollInterval);
 
   console.log('[Vivaldi Dynamic Island] Loaded OK');
 })();
@@ -238,7 +244,7 @@ const { execSync } = require('child_process');
 function buildZip() {
   console.log('Building Extension ZIP...');
   const extDir = path.join(__dirname, 'chrome-extension');
-  const zipPath = path.join(__dirname, 'dynamic-island-extension.zip');
+  const zipPath = path.join(__dirname, 'dynamic-island-extension-v1.2.zip');
   
   try {
     if (fs.existsSync(zipPath)) {

@@ -194,20 +194,25 @@ VDI.Core = (function() {
         }
         rawLines.sort(function(a, b) { return a.time - b.time; });
         for (var i = 0; i < rawLines.length; i++) {
-          if (!rawLines[i].text) continue;
-          var currentLine = rawLines[i];
-          var j = i + 1;
-          while (j < rawLines.length && (rawLines[j].time - currentLine.time) < 0.1) {
-            if (rawLines[j].text) {
-              if (currentLine.translation) currentLine.translation += ' | ';
-              currentLine.translation += rawLines[j].text;
+          var text = rawLines[i].text;
+          // If empty text, check if there's a significant gap (instrumental break)
+          if (!text) {
+            var nextIdx = -1;
+            for (var j = i + 1; j < rawLines.length; j++) {
+              if (rawLines[j].text) { nextIdx = j; break; }
             }
-            rawLines[j].text = '';
-            j++;
+            var gap = nextIdx > -1 ? rawLines[nextIdx].time - rawLines[i].time : 0;
+            if (gap >= 5) {
+              // This is an instrumental break — insert a ♪ marker
+              lines.push({ time: rawLines[i].time, text: '♪', translation: '' });
+            }
+            continue;
           }
-          if (currentLine.text) {
-            lines.push(currentLine);
-          }
+          lines.push(rawLines[i]);
+        }
+        // Also check for a long intro before the first lyric
+        if (lines.length > 0 && lines[0].time >= 5) {
+          lines.unshift({ time: 0, text: '♪', translation: '' });
         }
       } else if (data.plainLyrics) {
         synced = false;
@@ -217,7 +222,8 @@ VDI.Core = (function() {
         }
       }
       if (lines.length === 0) return null;
-      return { lines: lines, synced: synced };
+      var trackUrl = data.id ? 'https://lrclib.net/track/' + data.id : 'https://lrclib.net';
+      return { lines: lines, synced: synced, url: trackUrl };
     }
 
     function doFetch(url, isProxy) {
@@ -242,7 +248,7 @@ VDI.Core = (function() {
           
           var result = parseLRCLib(data);
           if (result) {
-            cb(result.lines, result.synced);
+            cb(result.lines, result.synced, result.url);
           } else {
             throw new Error('No lyrics in response');
           }
@@ -261,6 +267,89 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Batch Romanization via Google Translate API
+  // ─────────────────────────────────────────────────────────────
+  function batchRomanize(lines, cb) {
+    if (!lines || lines.length === 0) return cb([]);
+    
+    var CHUNK_MAX = 800; // Safe chunk size for URL encoding
+    var chunks = [];
+    var currentChunk = [];
+    var currentLen = 0;
+    
+    for (var i = 0; i < lines.length; i++) {
+      var text = lines[i].text || '';
+      // Skip instrumentals
+      if (text === '♪' || text === '♫' || text === '&nbsp;' || !text.trim()) {
+        currentChunk.push({ index: i, text: '' });
+        continue;
+      }
+      var len = encodeURIComponent(text).length;
+      if (currentLen + len > CHUNK_MAX && currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+        currentLen = 0;
+      }
+      currentChunk.push({ index: i, text: text });
+      currentLen += len + 3; // +3 for \n
+    }
+    if (currentChunk.length > 0) chunks.push(currentChunk);
+
+    var results = new Array(lines.length);
+    var completed = 0;
+
+    if (chunks.length === 0) return cb(results);
+
+    chunks.forEach(function(chunk) {
+      // Strip existing pipes to avoid delimiter collision
+      var texts = chunk.map(function(c) { return c.text ? c.text.replace(/\|/g, ' ') : ''; }).filter(Boolean);
+      if (texts.length === 0) {
+        chunk.forEach(function(c) { results[c.index] = ''; });
+        completed++;
+        if (completed === chunks.length) cb(results);
+        return;
+      }
+
+      var q = texts.join(' | ');
+      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=rm&q=' + encodeURIComponent(q);
+      
+      fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var romStr = '';
+          if (data && data[0]) {
+            for (var j = 0; j < data[0].length; j++) {
+              if (data[0][j][3]) { // Romanization is usually at index 3
+                romStr += data[0][j][3];
+              } else if (data[0][j][2]) {
+                romStr += data[0][j][2];
+              }
+            }
+          }
+          var romLines = romStr.split(/\s*\|\s*/);
+          var idx = 0;
+          chunk.forEach(function(c) {
+            if (!c.text) {
+              results[c.index] = '';
+            } else {
+              var rLine = romLines[idx] || '';
+              // Occasionally GT capitalizes the first letter after a pipe, we can leave it
+              results[c.index] = rLine.trim();
+              idx++;
+            }
+          });
+          completed++;
+          if (completed === chunks.length) cb(results);
+        })
+        .catch(function() {
+          chunk.forEach(function(c) { results[c.index] = ''; });
+          completed++;
+          if (completed === chunks.length) cb(results);
+        });
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Tab media state extraction (injected into content pages)
   // ─────────────────────────────────────────────────────────────
   function getTabMediaState() {
@@ -268,7 +357,7 @@ VDI.Core = (function() {
     var auds = document.querySelectorAll('audio');
     var isYTMusic = window.location.hostname === 'music.youtube.com';
     var pipOk = !!(!isYTMusic && document.pictureInPictureEnabled && vids.length &&
-      Array.prototype.slice.call(vids).some(function(v) { return !v.disablePictureInPicture; }));
+          Array.prototype.slice.call(vids).some(function(v) { return !v.disablePictureInPicture; }));
 
     var uiDur = null;
     var uiCur = null;
@@ -286,6 +375,15 @@ VDI.Core = (function() {
             uiCur = parseTime(parts[0]);
             uiDur = parseTime(parts[1]);
           }
+        }
+
+        // The UI text is rounded to integers. Use the hidden player API for millisecond precision!
+        var player = document.getElementById('movie_player');
+        if (player && typeof player.getCurrentTime === 'function') {
+          try {
+            var pTime = player.getCurrentTime();
+            if (pTime >= 0) uiCur = pTime;
+          } catch (e) {}
         }
       } else if (window.location.hostname.indexOf('youtube.com') > -1) {
         var td = document.querySelector('.ytp-time-duration');
@@ -451,12 +549,12 @@ VDI.Core = (function() {
     } catch (e) {}
   }
 
-  function togglePiP(originalTabId) {
+  function togglePiP(sourceInfo) {
     function teleportBack() {
-      if (originalTabId) {
+      if (sourceInfo) {
         try {
           if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-            chrome.runtime.sendMessage({ type: 'VDI_TELEPORT_BACK', tabId: originalTabId });
+            chrome.runtime.sendMessage({ type: 'VDI_TELEPORT_BACK', source: sourceInfo });
           }
         } catch (e) {}
       }
@@ -553,6 +651,7 @@ VDI.Core = (function() {
     getPlayIcon: getPlayIcon,
     extractVibrant: extractVibrant,
     fetchLyrics: fetchLyrics,
+    batchRomanize: batchRomanize,
     getTabMediaState: getTabMediaState,
     executeMediaAction: executeMediaAction,
     togglePiP: togglePiP

@@ -229,17 +229,59 @@ VDI.Styles = (function() {
     rules.push(
       '.vdi-lyric-line.active{',
         'transform:scale(1.05);text-shadow:0 4px 20px rgba(0,0,0,0.5);filter:blur(0px);',
-        'background:linear-gradient(to right, #fff 50%, rgba(255,255,255,0.25) 50%);',
-        'background-size:200% 100%;',
-        'background-position:100% 0;',
-        '-webkit-background-clip:text;',
-        '-webkit-text-fill-color:transparent;',
-        'animation:sweep var(--line-dur, 2s) linear forwards;',
+        'color: #fff;',
       '}'
     );
+    rules.push(
+      '.vdi-full-line{',
+        'display:inline-block;',
+        'color:rgba(255,255,255,0.3);',
+        'transition: color 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);',
+        'filter: blur(1px);',
+      '}'
+    );
+    rules.push('.vdi-lyric-line.active .vdi-full-line{color:#fff; filter: blur(0px); text-shadow: 0 0 16px rgba(255,255,255,0.3); transition: color 0.3s ease-out, filter 0.3s ease-out, text-shadow 0.3s ease-out;}');
+    rules.push('#vdi-romanize-btn:hover{background:rgba(255,255,255,0.2) !important; color:#fff !important;}');
+    rules.push('#vdi-romanize-btn.active{background:#fff !important; color:#000 !important;}');
     rules.push('@keyframes sweep{ 0%{background-position:100% 0;} 100%{background-position:0% 0;} }');
-    rules.push('.vdi-lyric-line.unsynced{font-size:16px;color:rgba(255,255,255,0.8);transform:none;filter:none;-webkit-text-fill-color:#fff;}');
+    rules.push('.vdi-lyric-line.unsynced{font-size:16px;color:rgba(255,255,255,0.8);transform:none;filter:none;}');
     rules.push('.vdi-lyric-translation{font-size:14px;color:rgba(255,255,255,0.5);margin-top:6px;font-weight:500;}');
+    rules.push(
+      '.vdi-lyrics-source{',
+        'font-size:12px;color:rgba(255,255,255,0.4);margin-top:40px;text-align:center;',
+      '}'
+    );
+    rules.push(
+      '.vdi-lyrics-source a{',
+        'color:rgba(255,255,255,0.6);text-decoration:none;font-weight:600;transition:color 0.2s;',
+      '}'
+    );
+    rules.push('.vdi-lyrics-source a:hover{color:#fff;}');
+    rules.push(
+      '.vdi-instrumental-wrapper{',
+        'display:flex;justify-content:center;align-items:center;height:40px;margin-top:8px;',
+      '}'
+    );
+    rules.push(
+      '.vdi-instrumental{',
+        'position:relative;width:32px;height:32px;',
+      '}'
+    );
+    rules.push(
+      '.vdi-note-bg, .vdi-note-fill{',
+        'position:absolute;top:0;left:0;width:100%;height:100%;',
+        'fill:rgba(255,255,255,0.2);',
+      '}'
+    );
+    rules.push(
+      '.vdi-note-fill{',
+        'fill:#fff;',
+        'clip-path:inset(100% 0 0 0);',
+        '-webkit-clip-path:inset(100% 0 0 0);',
+      '}'
+    );
+    rules.push('.vdi-lyric-line.active .vdi-note-fill{animation:fillup var(--line-dur, 2s) linear forwards;}');
+    rules.push('@keyframes fillup{ 0%{clip-path:inset(100% 0 0 0);-webkit-clip-path:inset(100% 0 0 0);} 100%{clip-path:inset(0 0 0 0);-webkit-clip-path:inset(0 0 0 0);} }');
 
     return rules.join('');
   }

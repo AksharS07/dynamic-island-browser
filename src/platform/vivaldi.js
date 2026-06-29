@@ -41,11 +41,19 @@ VDI.Platform.Vivaldi = (function() {
           if (cb) cb(res[0] !== undefined ? res[0] : null);
         });
       } else {
+        console.warn('[VDI] execInTab failed: chrome.scripting or chrome.tabs APIs are missing. Are you in a valid extension context?');
         if (cb) cb(null);
       }
     } catch (e) {
+      console.warn('[VDI] execInTab exception:', e);
       if (cb) cb(null);
     }
+  }
+
+  function multiPoll(callback, intervals) {
+    intervals.forEach(function(delay) {
+      setTimeout(callback, delay);
+    });
   }
 
   function sendAction(tabId, action, value, onUpdate) {
@@ -53,9 +61,7 @@ VDI.Platform.Vivaldi = (function() {
     execInTab(tabId, VDI.Core.executeMediaAction, args, null);
 
     // Rapid poll after action to reflect changes
-    setTimeout(onUpdate, 150);
-    setTimeout(onUpdate, 400);
-    setTimeout(onUpdate, 900);
+    multiPoll(onUpdate, [150, 400, 900]);
   }
 
   function jumpToTab(tabId, windowId) {
@@ -118,12 +124,19 @@ VDI.Platform.Vivaldi = (function() {
     });
   } catch (e) {}
 
+  function romanizeLines(lines, cb) {
+    VDI.Core.batchRomanize(lines, cb);
+  }
+
   return {
+    isVivaldi: true,
     execInTab: execInTab,
     sendAction: sendAction,
     jumpToTab: jumpToTab,
     requestPiP: requestPiP,
     pollMedia: pollMedia,
-    getMediaStateFromTab: getMediaStateFromTab
+    getMediaStateFromTab: getMediaStateFromTab,
+    fetchLyrics: function(title, artist, cb) { VDI.Core.fetchLyrics(title, artist, null, cb); },
+    romanizeLines: romanizeLines
   };
 })();

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Island V1.2 - What's New</title>
+  <link rel="icon" href="icon128.png" type="image/png">
+  <style>
+    body {
+      background-color: #0d0d0d;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff, #888);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 32px;
+    }
+    .feature {
+      margin-bottom: 24px;
+    }
+    .feature h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feature p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .icon {
+      font-size: 20px;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 12px 24px;
+      background: #fff;
+      color: #000;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 12px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Dynamic Island V1.2</h1>
+    <div class="subtitle">Here is what's new in the latest update!</div>
+
+    <div class="feature">
+      <h3><span class="icon">✨</span> Cinematic Lyrics</h3>
+      <p>Lyrics now feature a stunning, ultra-smooth full-line glow animation that naturally fades into focus instead of a harsh word-by-word sweep.</p>
+    </div>
+
+    <div class="feature">
+      <h3><span class="icon">📺</span> Universal Picture-in-Picture</h3>
+      <p>Improved PiP integration instantly teleports you between tabs to flawlessly bypass browser security blocks. Pop out your video from any tab, anytime.</p>
+    </div>
+
+    <div class="feature">
+      <h3><span class="icon">🚀</span> Zero Jitter Engine</h3>
+      <p>The playback progress bar is now mathematically smoothed to perfectly glide across your screen, completely eliminating rubber-banding and lag.</p>
+    </div>
+
+    <div class="feature">
+      <h3><span class="icon">🎨</span> Sleek Tools & Smart Caching</h3>
+      <p>The lyrics panel features a unified, unobtrusive toolbar for Romanization and corrections. Plus, opening new tabs will now load lyrics instantly from memory!</p>
+    </div>
+
+    <a href="#" id="close-btn" class="btn">Awesome, let's go!</a>
+  </div>
+  <script src="patch-notes.js"></script>
+</body>
+</html>

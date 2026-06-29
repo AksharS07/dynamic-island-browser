@@ -76,6 +76,7 @@ VDI.Platform.ChromeExt = (function() {
         world: 'ISOLATED'
       }, function(res) {
         if (chrome.runtime.lastError || !res) {
+          console.warn('[VDI] execInTab failed:', chrome.runtime.lastError);
           if (cb) cb(null);
           return;
         }
@@ -151,10 +152,32 @@ VDI.Platform.ChromeExt = (function() {
       });
     }
 
+    function multiPoll(callback, intervals) {
+      intervals.forEach(function(delay) {
+        setTimeout(callback, delay);
+      });
+    }
+
     function handleMessage(msg, sender, sendResponse) {
       if (msg.type === 'VDI_ACTION') {
         if (msg.act === 'pip') {
-          execInTab(S.tabId, VDI.Core.togglePiP, [], null);
+          var sourceTabId = (sender && sender.tab) ? sender.tab.id : null;
+          var sourceWinId = (sender && sender.tab) ? sender.tab.windowId : null;
+          
+          if (S.tabId !== null && sourceTabId !== S.tabId) {
+            // Teleport to the media tab so the user can interact with the overlay
+            chrome.tabs.update(S.tabId, { active: true }, function() {
+              if (S.windowId !== null) {
+                chrome.windows.update(S.windowId, { focused: true }, function() {
+                  execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: sourceTabId, winId: sourceWinId}], null);
+                });
+              } else {
+                execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: sourceTabId, winId: sourceWinId}], null);
+              }
+            });
+          } else {
+            execInTab(S.tabId, VDI.Core.togglePiP, [null], null);
+          }
         } else if (msg.act === 'jump') {
           if (S.tabId !== null) {
             chrome.tabs.update(S.tabId, { active: true });
@@ -167,10 +190,11 @@ VDI.Platform.ChromeExt = (function() {
           execInTab(S.tabId, VDI.Core.executeMediaAction, args, null);
 
           // Rapid poll after actions
-          setTimeout(poll, 200);
-          setTimeout(poll, 500);
-          setTimeout(poll, 1000);
+          multiPoll(poll, [200, 500, 1000]);
         }
+      } else if (msg.type === 'VDI_TELEPORT_BACK' && msg.source) {
+        if (msg.source.tabId) chrome.tabs.update(msg.source.tabId, { active: true });
+        if (msg.source.winId) chrome.windows.update(msg.source.winId, { focused: true });
       } else if (msg.type === 'VDI_REQUEST_STATE') {
         sendResponse(S);
       }
@@ -183,6 +207,12 @@ VDI.Platform.ChromeExt = (function() {
       chrome.runtime.onMessage.addListener(handleMessage);
       chrome.tabs.onActivated.addListener(function() { poll(); });
       chrome.windows.onFocusChanged.addListener(function() { poll(); });
+
+      chrome.runtime.onInstalled.addListener(function(details) {
+        if (details.reason === "update") {
+          chrome.tabs.create({ url: "patch-notes.html" });
+        }
+      });
     }
 
     return {
