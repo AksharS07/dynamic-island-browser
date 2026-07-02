@@ -1,4 +1,4 @@
-# Dynamic Island for Browsers (V1.2)
+# Dynamic Island for Browsers (V1.2) (Tested ONLY for YouTube and YouTube Music)
 
 <p align="center">
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
