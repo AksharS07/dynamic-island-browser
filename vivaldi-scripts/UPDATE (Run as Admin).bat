@@ -27,7 +27,7 @@ echo if (-not (Test-Path $windowHtml)) { Write-Host 'Could not find window.html.
 echo $html = Get-Content $windowHtml -Raw >> "%PSScript%"
 echo $rand = Get-Random >> "%PSScript%"
 echo $html = $html -replace '^<script src=''dynamic-island\.js[^'']*''\s*^>\s*^</script^>', '' >> "%PSScript%"
-echo $html = $html -replace '^</body^>', "^<script src='dynamic-island.js?v=$rand'^>^</script^>^</body^>" >> "%PSScript%"
+echo $html = $html -replace '^</body^>', "<script src='dynamic-island.js?v=$rand'></script></body>" >> "%PSScript%"
 echo $utf8NoBom = New-Object System.Text.UTF8Encoding $False >> "%PSScript%"
 echo [System.IO.File]::WriteAllText($windowHtml, $html, $utf8NoBom) >> "%PSScript%"
 echo Write-Host 'Patched window.html successfully with cache-busting.' >> "%PSScript%"
