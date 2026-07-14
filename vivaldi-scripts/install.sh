@@ -43,7 +43,7 @@ fi
 
 # Copy the dynamic island payload
 echo "Copying dynamic-island.js..."
-cp "dynamic-island.js" "$VIVALDI_DIR/dynamic-island.js"
+cp "../dynamic-island.js" "$VIVALDI_DIR/dynamic-island.js"
 chmod 644 "$VIVALDI_DIR/dynamic-island.js"
 
 # Inject the script tag before </body>
