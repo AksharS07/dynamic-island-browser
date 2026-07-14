@@ -53,9 +53,11 @@ function buildVivaldi() {
   var island = VDI.UI.createIsland();
   var lyrPanel = VDI.UI.createLyricsPanel();
   var stgPanel = VDI.UI.createSettingsPanel();
+  var stgTooltip = VDI.UI.createSettingsTooltip();
   document.body.appendChild(island);
   document.body.appendChild(lyrPanel);
   document.body.appendChild(stgPanel);
+  document.body.appendChild(stgTooltip);
 
   // Platform adapter
   var platform = {
@@ -177,9 +179,11 @@ function buildChromeContent() {
   var island = VDI.UI.createIsland();
   var lyrPanel = VDI.UI.createLyricsPanel();
   var stgPanel = VDI.UI.createSettingsPanel();
+  var stgTooltip = VDI.UI.createSettingsTooltip();
   document.body.appendChild(island);
   document.body.appendChild(lyrPanel);
   document.body.appendChild(stgPanel);
+  document.body.appendChild(stgTooltip);
 
   // Platform adapter (Chrome Extension)
   var platform = {
