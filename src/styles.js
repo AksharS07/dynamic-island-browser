@@ -316,6 +316,35 @@ VDI.Styles = (function() {
       '.vdi-sz-l.active, .vdi-sz-r.active{transform:translateY(-50%) scale(1.03);}'
     );
 
+    // Settings Panel & Gear Icon
+    rules.push(
+      '#vdi-settings-btn{',
+        'width:24px;height:24px;position:absolute;top:10px;left:10px;border-radius:50%;',
+        'display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;',
+        'transition:all 0.2s;background:rgba(255,255,255,0.1);z-index:3;',
+      '}',
+      '#vdi:hover #vdi-settings-btn{opacity:1;}',
+      '#vdi-settings-btn:hover{background:rgba(255,255,255,0.25);transform:rotate(45deg);}',
+      '#vdi-settings-btn svg{width:14px;height:14px;fill:rgba(255,255,255,0.8);}',
+      '#vdi-settings-panel{',
+        'position:absolute;top:calc(100% + 12px);left:10px;width:260px;padding:16px;',
+        'background:rgba(20,20,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);',
+        'border:1px solid rgba(255,255,255,0.08);border-radius:24px;box-shadow:0 20px 40px rgba(0,0,0,0.5);',
+        'opacity:0;transform:translateY(-10px);pointer-events:none;transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);',
+        'z-index:2147483647;display:flex;flex-direction:column;gap:12px;font-family:system-ui,sans-serif;',
+      '}',
+      '#vdi-settings-panel.show{opacity:1;transform:translateY(0);pointer-events:auto;}',
+      '.vdi-stg-row{display:flex;justify-content:space-between;align-items:center;}',
+      '.vdi-stg-label{color:rgba(255,255,255,0.9);font-size:13px;font-weight:500;}',
+      '.vdi-switch{position:relative;display:inline-block;width:36px;height:20px;}',
+      '.vdi-switch input{opacity:0;width:0;height:0;}',
+      '.vdi-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:rgba(255,255,255,0.1);transition:.3s;border-radius:20px;border:1px solid rgba(255,255,255,0.1);}',
+      '.vdi-slider:before{position:absolute;content:"";height:14px;width:14px;left:2px;bottom:2px;background-color:rgba(255,255,255,0.6);transition:.3s;border-radius:50%;}',
+      '.vdi-switch input:checked + .vdi-slider{background-color:var(--vdi-accent, #6366f1);border-color:transparent;}',
+      '.vdi-switch input:checked + .vdi-slider:before{transform:translateX(16px);background-color:#fff;}',
+      '.vdi-stg-header{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:4px;font-weight:600;}'
+    );
+
     return rules.join('');
   }
 

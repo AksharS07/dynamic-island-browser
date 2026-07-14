@@ -1060,6 +1060,35 @@ VDI.Styles = (function() {
       '.vdi-sz-l.active, .vdi-sz-r.active{transform:translateY(-50%) scale(1.03);}'
     );
 
+    // Settings Panel & Gear Icon
+    rules.push(
+      '#vdi-settings-btn{',
+        'width:24px;height:24px;position:absolute;top:10px;left:10px;border-radius:50%;',
+        'display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;',
+        'transition:all 0.2s;background:rgba(255,255,255,0.1);z-index:3;',
+      '}',
+      '#vdi:hover #vdi-settings-btn{opacity:1;}',
+      '#vdi-settings-btn:hover{background:rgba(255,255,255,0.25);transform:rotate(45deg);}',
+      '#vdi-settings-btn svg{width:14px;height:14px;fill:rgba(255,255,255,0.8);}',
+      '#vdi-settings-panel{',
+        'position:absolute;top:calc(100% + 12px);left:10px;width:260px;padding:16px;',
+        'background:rgba(20,20,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);',
+        'border:1px solid rgba(255,255,255,0.08);border-radius:24px;box-shadow:0 20px 40px rgba(0,0,0,0.5);',
+        'opacity:0;transform:translateY(-10px);pointer-events:none;transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);',
+        'z-index:2147483647;display:flex;flex-direction:column;gap:12px;font-family:system-ui,sans-serif;',
+      '}',
+      '#vdi-settings-panel.show{opacity:1;transform:translateY(0);pointer-events:auto;}',
+      '.vdi-stg-row{display:flex;justify-content:space-between;align-items:center;}',
+      '.vdi-stg-label{color:rgba(255,255,255,0.9);font-size:13px;font-weight:500;}',
+      '.vdi-switch{position:relative;display:inline-block;width:36px;height:20px;}',
+      '.vdi-switch input{opacity:0;width:0;height:0;}',
+      '.vdi-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:rgba(255,255,255,0.1);transition:.3s;border-radius:20px;border:1px solid rgba(255,255,255,0.1);}',
+      '.vdi-slider:before{position:absolute;content:"";height:14px;width:14px;left:2px;bottom:2px;background-color:rgba(255,255,255,0.6);transition:.3s;border-radius:50%;}',
+      '.vdi-switch input:checked + .vdi-slider{background-color:var(--vdi-accent, #6366f1);border-color:transparent;}',
+      '.vdi-switch input:checked + .vdi-slider:before{transform:translateX(16px);background-color:#fff;}',
+      '.vdi-stg-header{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:4px;font-weight:600;}'
+    );
+
     return rules.join('');
   }
 
@@ -1351,6 +1380,9 @@ VDI.UI = (function() {
         '<div id="vdi-col-btn"><svg id="vdi-col-icon" viewBox="0 0 24 24" fill="white" width="10" height="10">' + VDI.Core.getPlayIcon(false) + '</svg></div>' +
       '</div>' +
       '<div id="vdi-exp">' +
+        '<div id="vdi-settings-btn" title="Settings">' +
+          '<svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"></path></svg>' +
+        '</div>' +
         '<button id="vdi-close-btn" title="Hide Island" style="position:absolute; top:12px; right:12px; z-index:100; background:rgba(255,255,255,0.1); border:none; border-radius:50%; width:24px; height:24px; color:rgba(255,255,255,0.6); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s;">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
         '</button>' +
@@ -1384,6 +1416,14 @@ VDI.UI = (function() {
             '</div>' +
           '</div>' +
         '</div>' +
+      '</div>' +
+      '<div id="vdi-settings-panel">' +
+        '<div class="vdi-stg-header">General</div>' +
+        '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YouTube</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideyt"><span class="vdi-slider"></span></label></div>' +
+        '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YT Music</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideytm"><span class="vdi-slider"></span></label></div>' +
+        '<div class="vdi-stg-header" style="margin-top:8px;">Features</div>' +
+        '<div class="vdi-stg-row"><span class="vdi-stg-label">Enable Lyrics Engine</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-enlyrics"><span class="vdi-slider"></span></label></div>' +
+        '<div class="vdi-stg-row"><span class="vdi-stg-label">Free Placement</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-freeplace"><span class="vdi-slider"></span></label></div>' +
       '</div>';
 
     return island;
@@ -2163,6 +2203,48 @@ VDI.UI = (function() {
         });
       }
 
+      // Settings Modal Logic
+      var stgBtn = $('vdi-settings-btn');
+      var stgPanel = $('vdi-settings-panel');
+      if (stgBtn && stgPanel) {
+        stgBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          stgPanel.classList.toggle('show');
+          // Sync UI state
+          $('vdi-stg-hideyt').checked = settings.hideYouTube;
+          $('vdi-stg-hideytm').checked = settings.hideYouTubeMusic;
+          $('vdi-stg-enlyrics').checked = settings.enableLyrics;
+          $('vdi-stg-freeplace').checked = settings.freePlacement;
+        });
+
+        document.addEventListener('click', function(e) {
+          if (!island.contains(e.target)) {
+            stgPanel.classList.remove('show');
+          }
+        });
+
+        var bindStg = function(id, key) {
+          var el = $(id);
+          if (el) {
+            el.addEventListener('change', function(e) {
+              settings[key] = e.target.checked;
+              if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                var update = {};
+                update[key] = settings[key];
+                chrome.storage.local.set(update);
+              } else {
+                localStorage.setItem('vdi_stg_' + key, settings[key]);
+              }
+              updateUI();
+            });
+          }
+        };
+
+        bindStg('vdi-stg-hideyt', 'hideYouTube');
+        bindStg('vdi-stg-hideytm', 'hideYouTubeMusic');
+        bindStg('vdi-stg-enlyrics', 'enableLyrics');
+        bindStg('vdi-stg-freeplace', 'freePlacement');
+      }
 
 
       $('vdi-play').addEventListener('click', function(e) {
@@ -2440,8 +2522,16 @@ VDI.UI = (function() {
         });
       } else {
         applyPos(localStorage.getItem('vdi_pos_x'), localStorage.getItem('vdi_pos_y'), localStorage.getItem('vdi_transform'));
+        var getBool = function(key, defaultVal) {
+          var val = localStorage.getItem('vdi_stg_' + key);
+          return val !== null ? val === 'true' : defaultVal;
+        };
+        settings.hideYouTube = getBool('hideYouTube', settings.hideYouTube);
+        settings.hideYouTubeMusic = getBool('hideYouTubeMusic', settings.hideYouTubeMusic);
+        settings.enableLyrics = getBool('enableLyrics', settings.enableLyrics);
+        settings.freePlacement = getBool('freePlacement', settings.freePlacement);
       }
-
+      
       bindEvents();
       startTick();
       setupFullscreen();
