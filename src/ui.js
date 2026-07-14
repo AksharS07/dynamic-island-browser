@@ -63,17 +63,31 @@ VDI.UI = (function() {
             '</div>' +
           '</div>' +
         '</div>' +
-      '</div>' +
-      '<div id="vdi-settings-panel">' +
-        '<div class="vdi-stg-header">General</div>' +
-        '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YouTube</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideyt"><span class="vdi-slider"></span></label></div>' +
-        '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YT Music</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideytm"><span class="vdi-slider"></span></label></div>' +
-        '<div class="vdi-stg-header" style="margin-top:8px;">Features</div>' +
-        '<div class="vdi-stg-row"><span class="vdi-stg-label">Enable Lyrics Engine</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-enlyrics"><span class="vdi-slider"></span></label></div>' +
-        '<div class="vdi-stg-row"><span class="vdi-stg-label">Free Placement</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-freeplace"><span class="vdi-slider"></span></label></div>' +
       '</div>';
 
     return island;
+  }
+
+  function createSettingsPanel(opts) {
+    opts = opts || {};
+    var panel = document.createElement('div');
+    panel.id = 'vdi-settings-panel';
+    panel.innerHTML =
+      '<div class="vdi-stg-header">General</div>' +
+      '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YouTube</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideyt"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YT Music</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideytm"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-header" style="margin-top:8px;">Features</div>' +
+      '<div class="vdi-stg-row"><span class="vdi-stg-label">Enable Lyrics Engine</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-enlyrics"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><span class="vdi-stg-label">Free Placement</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-freeplace"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-header" style="margin-top:8px;">Presets</div>' +
+      '<div class="vdi-stg-row" style="justify-content:space-between; margin-top:4px;">' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-t">Top</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-b">Bottom</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-l">Left</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-r">Right</button>' +
+      '</div>' +
+      '</div>';
+    return panel;
   }
 
   function createLyricsPanel(opts) {
@@ -95,7 +109,7 @@ VDI.UI = (function() {
     return panel;
   }
 
-  function createController(island, lyrPanel, platform, opts) {
+  function createController(island, lyrPanel, stgPanel, platform, opts) {
     opts = opts || {};
     var isVivaldi = opts.isVivaldi || false;
 
@@ -147,7 +161,7 @@ VDI.UI = (function() {
     var idleDelay = opts.idleDelay || 9000;
     var collapseDelay = opts.collapseDelay || 500;
     var isDragging = false;
-    var settings = { hideYouTube: true, hideYouTubeMusic: false, enableLyrics: true, freePlacement: true };
+    var settings = { hideYouTube: false, hideYouTubeMusic: false, enableLyrics: true, freePlacement: true };
 
     // Helper
     function $(id) { return document.getElementById(id); }
@@ -165,6 +179,13 @@ VDI.UI = (function() {
       island.style.setProperty('--vdi-grad', grad);
       island.style.setProperty('--vdi-dark', dark);
       island.style.setProperty('--vdi-glow', glow);
+      
+      if (typeof stgPanel !== 'undefined' && stgPanel) {
+        stgPanel.style.setProperty('--vdi-accent', accent);
+        stgPanel.style.setProperty('--vdi-grad', grad);
+        stgPanel.style.setProperty('--vdi-dark', dark);
+        stgPanel.style.setProperty('--vdi-glow', glow);
+      }
     }
 
     // Update progress bar
@@ -201,8 +222,8 @@ VDI.UI = (function() {
     function updateUI() {
       var isBrowserFs = document.getElementById('browser') && document.getElementById('browser').classList.contains('fullscreen');
       
-      var onYTM = window.location.hostname.includes('music.youtube.com');
-      var onYT = window.location.hostname.includes('youtube.com') && !onYTM;
+      var onYTM = opts.isVivaldi ? state.isMusicApp : window.location.hostname.includes('music.youtube.com');
+      var onYT = opts.isVivaldi ? state.isYouTubeVideo : (window.location.hostname.includes('youtube.com') && !window.location.hostname.includes('music.youtube.com'));
       
       var isHiddenByApp = (state.isMusicApp && settings.hideYouTubeMusic && onYTM) || 
                           (state.isYouTubeVideo && settings.hideYouTube && onYT);
@@ -330,6 +351,24 @@ VDI.UI = (function() {
         lyr.style.top = (islandBottom + 16) + 'px';
         lyr.style.maxHeight = Math.max(100, ch - islandBottom - 32) + 'px';
       }
+    }
+
+    function updateSettingsPanelPosition() {
+      if (!stgPanel || !stgPanel.classList.contains('show')) return;
+      var r = island.getBoundingClientRect();
+      var expH = 152;
+      var ch = window.innerHeight;
+      var islandTop = r.top;
+      
+      if (islandTop > ch / 2 - (expH / 2)) {
+        stgPanel.style.top = 'auto';
+        stgPanel.style.bottom = (ch - islandTop + 16) + 'px';
+      } else {
+        var islandBottom = islandTop + expH;
+        stgPanel.style.bottom = 'auto';
+        stgPanel.style.top = (islandBottom + 16) + 'px';
+      }
+      stgPanel.style.left = (r.left + r.width / 2) + 'px';
     }
 
     // Lyrics handling
@@ -701,9 +740,10 @@ VDI.UI = (function() {
         isDragging = true;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
-        var rect = island.getBoundingClientRect();
-        startLeftCenter = rect.left + (rect.width / 2);
-        startTop = rect.top;
+
+        var r = island.getBoundingClientRect();
+        startLeftCenter = r.left + (r.width / 2);
+        startTop = r.top;
         island.style.transition = 'none';
 
         // Show snap zones
@@ -772,6 +812,7 @@ VDI.UI = (function() {
         if (state.lyricsOn) {
           updateLyricsPanelPosition();
         }
+        updateSettingsPanelPosition();
       });
 
       document.addEventListener('mouseup', function(e) {
@@ -852,11 +893,16 @@ VDI.UI = (function() {
 
       // Settings Modal Logic
       var stgBtn = $('vdi-settings-btn');
-      var stgPanel = $('vdi-settings-panel');
       if (stgBtn && stgPanel) {
         stgBtn.addEventListener('click', function(e) {
           e.stopPropagation();
+          if (state.lyricsOn && !stgPanel.classList.contains('show')) {
+            $('vdi-lyr-btn').click(); // close lyrics
+          }
           stgPanel.classList.toggle('show');
+          if (stgPanel.classList.contains('show')) {
+            updateSettingsPanelPosition();
+          }
           // Sync UI state
           $('vdi-stg-hideyt').checked = settings.hideYouTube;
           $('vdi-stg-hideytm').checked = settings.hideYouTubeMusic;
@@ -864,8 +910,27 @@ VDI.UI = (function() {
           $('vdi-stg-freeplace').checked = settings.freePlacement;
         });
 
+        var hideStgTimeout;
+        stgPanel.addEventListener('mouseleave', function() {
+          hideStgTimeout = setTimeout(function() {
+            stgPanel.classList.remove('show');
+          }, 400);
+        });
+        stgPanel.addEventListener('mouseenter', function() {
+          clearTimeout(hideStgTimeout);
+          handleMouseEnter();
+        });
+        island.addEventListener('mouseleave', function() {
+          hideStgTimeout = setTimeout(function() {
+            stgPanel.classList.remove('show');
+          }, 400);
+        });
+        island.addEventListener('mouseenter', function() {
+          clearTimeout(hideStgTimeout);
+        });
+
         document.addEventListener('click', function(e) {
-          if (!island.contains(e.target)) {
+          if (!island.contains(e.target) && !stgPanel.contains(e.target)) {
             stgPanel.classList.remove('show');
           }
         });
@@ -880,7 +945,7 @@ VDI.UI = (function() {
                 update[key] = settings[key];
                 chrome.storage.local.set(update);
               } else {
-                localStorage.setItem('vdi_stg_' + key, settings[key]);
+                localStorage.setItem('vdi_cfg_' + key, settings[key]);
               }
               updateUI();
             });
@@ -891,8 +956,27 @@ VDI.UI = (function() {
         bindStg('vdi-stg-hideytm', 'hideYouTubeMusic');
         bindStg('vdi-stg-enlyrics', 'enableLyrics');
         bindStg('vdi-stg-freeplace', 'freePlacement');
-      }
 
+        var updatePos = function(left, top, transform) {
+          island.style.left = left;
+          island.style.top = top;
+          island.style.transform = transform;
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ 'vdi_loc_x': left, 'vdi_loc_y': top, 'vdi_transform': transform });
+          } else {
+            localStorage.setItem('vdi_loc_x', left);
+            localStorage.setItem('vdi_loc_y', top);
+            localStorage.setItem('vdi_transform', transform);
+          }
+          if (state.lyricsOn) updateLyricsPanelPosition();
+          updateSettingsPanelPosition();
+        };
+
+        if ($('vdi-stg-pos-t')) $('vdi-stg-pos-t').addEventListener('click', function(e) { e.stopPropagation(); updatePos('50%', '10px', 'translateX(-50%)'); });
+        if ($('vdi-stg-pos-b')) $('vdi-stg-pos-b').addEventListener('click', function(e) { e.stopPropagation(); updatePos('50%', (window.innerHeight - 152 - 10) + 'px', 'translateX(-50%)'); });
+        if ($('vdi-stg-pos-l')) $('vdi-stg-pos-l').addEventListener('click', function(e) { e.stopPropagation(); updatePos('210px', (window.innerHeight / 2 - 76) + 'px', 'translateX(-50%)'); });
+        if ($('vdi-stg-pos-r')) $('vdi-stg-pos-r').addEventListener('click', function(e) { e.stopPropagation(); updatePos((window.innerWidth - 210) + 'px', (window.innerHeight / 2 - 76) + 'px', 'translateX(-50%)'); });
+      }
 
       $('vdi-play').addEventListener('click', function(e) {
         e.stopPropagation();
@@ -929,6 +1013,9 @@ VDI.UI = (function() {
 
       $('vdi-lyr-btn').addEventListener('click', function(e) {
         e.stopPropagation();
+        if (typeof stgPanel !== 'undefined' && stgPanel && stgPanel.classList.contains('show')) {
+          stgPanel.classList.remove('show');
+        }
         state.lyricsOn = !state.lyricsOn;
         $('vdi-lyr-btn').classList.toggle('active', state.lyricsOn);
 
@@ -1144,33 +1231,35 @@ VDI.UI = (function() {
         if (state.lyricsOn) {
           updateLyricsPanelPosition();
         }
+        updateSettingsPanelPosition();
       });
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(null, function(res) {
-          applyPos(res.vdi_pos_x, res.vdi_pos_y, res.vdi_transform);
-          if (res.hideYouTube !== undefined) settings.hideYouTube = res.hideYouTube;
-          if (res.hideYouTubeMusic !== undefined) settings.hideYouTubeMusic = res.hideYouTubeMusic;
-          if (res.enableLyrics !== undefined) settings.enableLyrics = res.enableLyrics;
-          if (res.freePlacement !== undefined) settings.freePlacement = res.freePlacement;
-          updateUI();
+        chrome.storage.local.get(['vdi_loc_x', 'vdi_loc_y', 'vdi_transform', 'vdi_cfg_hideYouTube', 'vdi_cfg_hideYouTubeMusic', 'vdi_cfg_enableLyrics', 'vdi_cfg_freePlacement'], function(res) {
+          applyPos(res.vdi_loc_x, res.vdi_loc_y, res.vdi_transform);
+          if (res.vdi_cfg_hideYouTube !== undefined) settings.hideYouTube = res.vdi_cfg_hideYouTube;
+          if (res.vdi_cfg_hideYouTubeMusic !== undefined) settings.hideYouTubeMusic = res.vdi_cfg_hideYouTubeMusic;
+          if (res.vdi_cfg_enableLyrics !== undefined) settings.enableLyrics = res.vdi_cfg_enableLyrics;
+          if (res.vdi_cfg_freePlacement !== undefined) settings.freePlacement = res.vdi_cfg_freePlacement;
+
+          $('vdi-stg-hideyt').checked = settings.hideYouTube;
+          $('vdi-stg-hideytm').checked = settings.hideYouTubeMusic;
+          $('vdi-stg-enlyrics').checked = settings.enableLyrics;
+          $('vdi-stg-freeplace').checked = settings.freePlacement;
         });
 
-        chrome.storage.onChanged.addListener(function(changes) {
-          if (changes.vdi_pos_x || changes.vdi_pos_y || changes.vdi_transform) {
-            chrome.storage.local.get(['vdi_pos_x', 'vdi_pos_y', 'vdi_transform'], function(res) {
-              applyPos(res.vdi_pos_x, res.vdi_pos_y, res.vdi_transform);
-            });
+        chrome.storage.onChanged.addListener(function(changes, namespace) {
+          if (namespace === 'local') {
+            if (changes.vdi_cfg_hideYouTube) settings.hideYouTube = changes.vdi_cfg_hideYouTube.newValue;
+            if (changes.vdi_cfg_hideYouTubeMusic) settings.hideYouTubeMusic = changes.vdi_cfg_hideYouTubeMusic.newValue;
+            if (changes.vdi_cfg_enableLyrics) settings.enableLyrics = changes.vdi_cfg_enableLyrics.newValue;
+            if (changes.vdi_cfg_freePlacement) settings.freePlacement = changes.vdi_cfg_freePlacement.newValue;
+            updateUI();
           }
-          if (changes.hideYouTube) settings.hideYouTube = changes.hideYouTube.newValue;
-          if (changes.hideYouTubeMusic) settings.hideYouTubeMusic = changes.hideYouTubeMusic.newValue;
-          if (changes.enableLyrics) settings.enableLyrics = changes.enableLyrics.newValue;
-          if (changes.freePlacement) settings.freePlacement = changes.freePlacement.newValue;
-          updateUI();
         });
       } else {
-        applyPos(localStorage.getItem('vdi_pos_x'), localStorage.getItem('vdi_pos_y'), localStorage.getItem('vdi_transform'));
+        applyPos(localStorage.getItem('vdi_loc_x'), localStorage.getItem('vdi_loc_y'), localStorage.getItem('vdi_transform'));
         var getBool = function(key, defaultVal) {
-          var val = localStorage.getItem('vdi_stg_' + key);
+          var val = localStorage.getItem('vdi_cfg_' + key);
           return val !== null ? val === 'true' : defaultVal;
         };
         settings.hideYouTube = getBool('hideYouTube', settings.hideYouTube);
@@ -1196,6 +1285,7 @@ VDI.UI = (function() {
 
   return {
     createIsland: createIsland,
+    createSettingsPanel: createSettingsPanel,
     createLyricsPanel: createLyricsPanel,
     createController: createController
   };

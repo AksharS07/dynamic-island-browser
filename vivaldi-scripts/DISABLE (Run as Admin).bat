@@ -24,7 +24,7 @@ echo if (-not $vivPath) { Write-Host 'Could not find Vivaldi installation.'; pau
 echo $windowHtml = Join-Path $vivPath 'resources\vivaldi\window.html' >> "%PSScript%"
 echo if (-not (Test-Path $windowHtml)) { Write-Host 'Could not find window.html.'; pause; exit } >> "%PSScript%"
 echo $html = Get-Content $windowHtml -Raw >> "%PSScript%"
-echo $html = $html -replace '\<script src=''dynamic-island\.js[^'']*''\>\</script\>', '' >> "%PSScript%"
+echo $html = $html -replace '^<script src=''dynamic-island\.js[^^'']*''^>^</script^>', '' >> "%PSScript%"
 echo $utf8NoBom = New-Object System.Text.UTF8Encoding $False >> "%PSScript%"
 echo [System.IO.File]::WriteAllText($windowHtml, $html, $utf8NoBom) >> "%PSScript%"
 echo Write-Host 'Removed Dynamic Island from Vivaldi successfully.' >> "%PSScript%"

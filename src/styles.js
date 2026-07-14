@@ -330,10 +330,10 @@ VDI.Styles = (function() {
         'position:absolute;top:calc(100% + 12px);left:10px;width:260px;padding:16px;',
         'background:rgba(20,20,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);',
         'border:1px solid rgba(255,255,255,0.08);border-radius:24px;box-shadow:0 20px 40px rgba(0,0,0,0.5);',
-        'opacity:0;transform:translateY(-10px);pointer-events:none;transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);',
+        'opacity:0;transform:translate(-50%, -10px);pointer-events:none;transition:opacity 0.4s, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);',
         'z-index:2147483647;display:flex;flex-direction:column;gap:12px;font-family:system-ui,sans-serif;',
       '}',
-      '#vdi-settings-panel.show{opacity:1;transform:translateY(0);pointer-events:auto;}',
+      '#vdi-settings-panel.show{opacity:1;transform:translate(-50%, 0);pointer-events:auto;}',
       '.vdi-stg-row{display:flex;justify-content:space-between;align-items:center;}',
       '.vdi-stg-label{color:rgba(255,255,255,0.9);font-size:13px;font-weight:500;}',
       '.vdi-switch{position:relative;display:inline-block;width:36px;height:20px;}',
@@ -342,7 +342,9 @@ VDI.Styles = (function() {
       '.vdi-slider:before{position:absolute;content:"";height:14px;width:14px;left:2px;bottom:2px;background-color:rgba(255,255,255,0.6);transition:.3s;border-radius:50%;}',
       '.vdi-switch input:checked + .vdi-slider{background-color:var(--vdi-accent, #6366f1);border-color:transparent;}',
       '.vdi-switch input:checked + .vdi-slider:before{transform:translateX(16px);background-color:#fff;}',
-      '.vdi-stg-header{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:4px;font-weight:600;}'
+      '.vdi-stg-header{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--vdi-accent, #6366f1);margin-bottom:4px;font-weight:600;opacity:0.8;}',
+      '.vdi-preset-btn{background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.8); padding:4px 0; width:22%; border-radius:8px; cursor:pointer; font-family:inherit; font-size:11px; font-weight:600; transition:all 0.2s;}',
+      '.vdi-preset-btn:hover{background:var(--vdi-accent, #6366f1); color:#fff; border-color:transparent;}'
     );
 
     return rules.join('');

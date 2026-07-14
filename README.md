@@ -53,6 +53,7 @@ There are two versions:
 - **Time-Synced Lyrics & Romanization:** Fetches beautifully animated, time-synced lyrics in their original language. For non-Latin scripts (Japanese, Korean, Chinese, etc.), click the floating orb to silently query the Google Translate API and instantly provide highly accurate Romanization underneath! Click any lyric line to instantly seek to that part of the song.
 - **Instrumental Progress Bar:** During instrumental sections (♪/♫), the lyrics panel displays a buttery-smooth music note that fills up seamlessly like a progress bar, perfectly synced to the duration of the instrumental break.
 - **High-Res Artwork Injection:** Automatically cross-references YouTube and Spotify tracks with the Apple Music API to fetch crisp, high-resolution album art!
+- **In-App Settings Panel:** A sleek glassmorphic settings menu accessible directly from a gear icon on the island. Toggle features like Lyrics Engine, Free Placement, and blacklist specific sites (like YouTube or YouTube Music) on the fly, with settings syncing via Local Storage.
 - **Auto-Collapse & Idle State:** Expands on hover to show album art and controls. When inactive, it automatically shrinks into a tiny, unobtrusive dot so it stays completely out of your way.
 - **Context-Aware PiP:** Includes a Picture-in-Picture (PiP) button. On standard YouTube videos, the lyrics icon intelligently hides itself to give priority to the PiP button. 
 - **Universal PiP Teleportation Hack:** Because standard browser extensions and mods operate under strict cross-origin security rules, Chromium natively blocks programmatic PiP requests from different tabs. The island uses a custom "Teleportation Hack" that instantly teleports you to the video tab, triggers PiP, and seamlessly teleports you right back!
@@ -79,6 +80,8 @@ No build step, no dependencies, no account required.
 5. The script will automatically find your Vivaldi installation, inject the Dynamic Island (`dynamic-island.js`), and relaunch the browser for you.
 
 *(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
+
+**To Uninstall:** Simply run `DISABLE (Run as Admin).bat` to instantly strip the mod from Vivaldi's core files and return the browser to normal.
 
 ---
 

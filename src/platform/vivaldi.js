@@ -114,7 +114,7 @@ VDI.Platform.Vivaldi = (function() {
   }
 
   function getMediaStateFromTab(tabId, callback) {
-    execInTab(tabId, VDI.Core.getTabMediaState, [], callback, 'MAIN');
+    execInTab(tabId, VDI.Core.getTabMediaState, [], callback);
   }
 
   try {

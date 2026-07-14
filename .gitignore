@@ -4,3 +4,6 @@ node_modules/
 .png
 generate_promos.js
 DEVELOPER_NOTES.md
+.agents/
+PROJECT_PAUSE_STATE.md
+project_summary.md

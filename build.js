@@ -52,8 +52,10 @@ function buildVivaldi() {
   // Create UI
   var island = VDI.UI.createIsland();
   var lyrPanel = VDI.UI.createLyricsPanel();
+  var stgPanel = VDI.UI.createSettingsPanel();
   document.body.appendChild(island);
   document.body.appendChild(lyrPanel);
+  document.body.appendChild(stgPanel);
 
   // Platform adapter
   var platform = {
@@ -66,7 +68,7 @@ function buildVivaldi() {
   };
 
   // Create controller
-  var ctrl = VDI.UI.createController(island, lyrPanel, platform, {
+  var ctrl = VDI.UI.createController(island, lyrPanel, stgPanel, platform, {
     isVivaldi: true,
     tickInterval: 1000,
     idleDelay: 9000,
@@ -174,8 +176,10 @@ function buildChromeContent() {
   // Create UI
   var island = VDI.UI.createIsland();
   var lyrPanel = VDI.UI.createLyricsPanel();
+  var stgPanel = VDI.UI.createSettingsPanel();
   document.body.appendChild(island);
   document.body.appendChild(lyrPanel);
+  document.body.appendChild(stgPanel);
 
   // Platform adapter (Chrome Extension)
   var platform = {
@@ -187,7 +191,7 @@ function buildChromeContent() {
   };
 
   // Create controller
-  var ctrl = VDI.UI.createController(island, lyrPanel, platform, {
+  var ctrl = VDI.UI.createController(island, lyrPanel, stgPanel, platform, {
     isVivaldi: false,
     tickInterval: 1000,
     idleDelay: 9000,

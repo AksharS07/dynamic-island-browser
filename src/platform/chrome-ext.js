@@ -120,7 +120,7 @@ VDI.Platform.ChromeExt = (function() {
               S.isMusicApp = res.isMusicApp || false;
               if (!res.hasMedia) S.hasMedia = false;
               broadcastState();
-            }, 'MAIN');
+            });
           } else if (S.hasMedia) {
             S.hasMedia = false;
             broadcastState();
@@ -150,7 +150,7 @@ VDI.Platform.ChromeExt = (function() {
           S.isMusicApp = res.isMusicApp || false;
 
           broadcastState();
-        }, 'MAIN');
+        });
       });
     }
 
