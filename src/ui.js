@@ -1338,6 +1338,7 @@ VDI.UI = (function() {
   return {
     createIsland: createIsland,
     createSettingsPanel: createSettingsPanel,
+    createSettingsTooltip: createSettingsTooltip,
     createLyricsPanel: createLyricsPanel,
     createController: createController
   };
