@@ -1,40 +1,37 @@
 # Development Pause State
-**Date:** June 22, 2026
+**Date:** July 8, 2026
 
-We are pausing development here because of your upcoming final exams. Best of luck! 
-When you return, we will resume fixing the remaining UI animation and sync bugs **stage by stage**, pausing for your testing after each individual change.
+We are pausing development here because Copilot Student credits have run out. When development resumes, we have several major fully-engineered logic blocks ready to be seamlessly integrated into the codebase.
 
 ---
 
 ## 🛑 Current State of the Project
-The Vivaldi Dynamic Island extension successfully fetches lyrics via LRCLib, parses them, injects the UI, and handles both native Vivaldi media and YouTube Music web player media. 
+The project is currently at **V1.2**. It has been published to GitHub and submitted to the Microsoft Edge Add-ons store. V1.2 includes the cinematic lyrics engine, universal PiP teleportation hack, and smart local caching.
 
-Recently, we resolved:
-- The "both lines highlighting simultaneously" bug for multi-line wrapped text (by moving to word-by-word span generation).
-- Re-activated the Romanize button CSS using `!important` tags to block YouTube Music overrides.
-- Implemented an exact URL extractor for LRCLib to point the source link directly to the current track for easy editing.
+## 🚀 Pending Features to Implement
+The following features have had their logic completely built and tested locally. They just need to be merged into the official source code files when development resumes.
 
-## 🐛 Remaining Bugs to Address (Next Steps)
-When you are back, we will execute the following plan **ONE STEP AT A TIME**. Do NOT execute everything at once.
+### 1. Real-Time EQ Visualizer (Web Audio API)
+*   **The Goal:** Replace the random "Fake Visualizer" with a true audio-reactive EQ that reads direct frequency data from the media element.
+*   **The Solution:** Copilot successfully engineered a global Web Audio API probe (`window.__vdiEqProbe`) that safely attaches an `AnalyserNode` to the YouTube `<video>` element without tripping repeated `AudioContext` errors.
+*   **Implementation Steps:**
+    *   Add `getRealtimeEqFromElement` to `src/core.js` and pipe `eq` into the returned media state.
+    *   Update `src/platform/chrome-ext.js` and `build.js` to pass `S.eq` through the content bridge.
+    *   Update `src/ui.js` to consume `state.eq` using exponential smoothing (`eqSmooth[i] = (eqSmooth[i] * 0.65) + (target * 0.35)`).
 
-### Stage 1: Fix the Sync Jitter (Rubber-banding)
-- **The Issue:** The UI locally extrapolates the song's position every 50ms. Every 1s, the background script sends the exact position. If they mismatch by a few milliseconds, the UI snaps backwards, causing the lyrics scrolling to judder.
-- **The Plan:** Completely remove the `Math.abs(drift) > 0.5` snapping logic. Instead, track `lastSyncTime = Date.now()` and `lastSyncPosition` when a message arrives, and *only* project forward using pure chronological elapsed time. This guarantees zero rubber-banding.
-- **Action:** Modify `setState` and `startTick` in `src/ui.js`.
-- *STOP AND TEST AFTER THIS STAGE.*
+### 2. Cascading Lyrics Fallback System
+*   **The Goal:** Provide a robust fallback for obscure songs when `lrclib.net` fails.
+*   **The Solution:** A highly resilient fallback that queries `api.lyrics.ovh/v1/`. It scrubs YouTube suffixes (" - official video"), splits pre-dash titles, and routes failed direct requests through the `allorigins.win` proxy to guarantee CORS bypass.
+*   **Implementation Steps:**
+    *   Add `fetchSecondaryLyrics` and `parsePlainLyricsText` to `src/core.js`.
+    *   Call `fetchSecondaryLyrics` inside the final `.catch()` branch of the primary `lrclib` fetch block.
 
-### Stage 2: Fix the "Too Slow" Word Sweeping Animation
-- **The Issue:** Because LRCLib provides sync times for whole lines (not words), my code stretches the word highlight animation across the *entire gap* before the next line. If the gap is 5 seconds, the sweep feels painfully slow.
-- **The Plan:** Decouple word animation from gap duration. Set a fixed, natural reading speed (e.g., `~0.25s` per word). The line will fill up swiftly and pleasantly, then hold its lit state until the next line arrives. 
-- **Action:** Refactor the `wordsHtml` mapping duration algorithm in `src/ui.js`.
-- *STOP AND TEST AFTER THIS STAGE.*
-
-### Stage 3: Refine the Romanize Button & Source Link
-- **The Issue:** The LRCLib source link is tucked deep at the bottom of the lyrics scroll, making it annoying to reach. The Romanize button feels visually disjointed from the premium glassmorphic UI.
-- **The Plan:** Redesign the `#vdi-lyrics-header`. Move the "Correct Lyrics" LRCLib link into the sticky header. Transform the Romanize button into a sleek, premium icon toggle inside the header, creating a unified "toolbar" aesthetic.
-- **Action:** Overhaul DOM structure in `src/ui.js` and update `#vdi-lyrics-header` in `src/styles.js`.
-- *STOP AND TEST AFTER THIS STAGE.*
+### 3. UI Lyrics Engine Polish
+*   **Word-Based Reading Speed:** Clamp the CSS animation duration using `wordCount * 0.25` so the text glow stays readable and snappy, ignoring massive LRCLib time gaps.
+*   **True Instrumental Duration:** Ensure `lineGapDuration` for `♪/♫` correctly uses `nextTime - currTime` so the note fills perfectly over the exact length of the musical break.
+*   **Seek-Aware Progress Fill:** Replace the static CSS `@keyframes` with a dynamic JS-driven `clip-path` update (`progress = (position - start) / (end - start)`) that instantly updates when the user skips through the track.
+    *   **Implementation:** Add `setInstrumentalFill` and `updateInstrumentalProgress` to `src/ui.js`, and replace `.vdi-note-fill` CSS keyframes with a simple `transition: clip-path .12s linear` in `src/styles.js`.
 
 ---
 
-*Take a deep breath and crush those finals! You can just point me to `PROJECT_PAUSE_STATE.md` when you are ready to continue.*
+*Just point me to this file when you are ready to resume, and I can implement all of these logic blocks into the codebase for you!*

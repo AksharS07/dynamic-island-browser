@@ -64,17 +64,19 @@ VDI.Platform.ChromeExt = (function() {
 
     var pollInterval = 1000;
 
-    function execInTab(tabId, fn, args, cb) {
+    function execInTab(tabId, fn, args, cb, world) {
       if (!tabId) {
         if (cb) cb(null);
         return;
       }
-      chrome.scripting.executeScript({
+      var opts = {
         target: { tabId: tabId, allFrames: false },
         func: fn,
-        args: args || [],
-        world: 'ISOLATED'
-      }, function(res) {
+        args: args || []
+      };
+      if (world) opts.world = world;
+
+      chrome.scripting.executeScript(opts, function(res) {
         if (chrome.runtime.lastError || !res) {
           console.warn('[VDI] execInTab failed:', chrome.runtime.lastError);
           if (cb) cb(null);
@@ -118,7 +120,7 @@ VDI.Platform.ChromeExt = (function() {
               S.isMusicApp = res.isMusicApp || false;
               if (!res.hasMedia) S.hasMedia = false;
               broadcastState();
-            });
+            }, 'MAIN');
           } else if (S.hasMedia) {
             S.hasMedia = false;
             broadcastState();
@@ -148,7 +150,7 @@ VDI.Platform.ChromeExt = (function() {
           S.isMusicApp = res.isMusicApp || false;
 
           broadcastState();
-        });
+        }, 'MAIN');
       });
     }
 
@@ -161,23 +163,36 @@ VDI.Platform.ChromeExt = (function() {
     function handleMessage(msg, sender, sendResponse) {
       if (msg.type === 'VDI_ACTION') {
         if (msg.act === 'pip') {
-          var sourceTabId = (sender && sender.tab) ? sender.tab.id : null;
-          var sourceWinId = (sender && sender.tab) ? sender.tab.windowId : null;
-          
-          if (S.tabId !== null && sourceTabId !== S.tabId) {
-            // Teleport to the media tab so the user can interact with the overlay
-            chrome.tabs.update(S.tabId, { active: true }, function() {
-              if (S.windowId !== null) {
-                chrome.windows.update(S.windowId, { focused: true }, function() {
-                  execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: sourceTabId, winId: sourceWinId}], null);
-                });
-              } else {
-                execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: sourceTabId, winId: sourceWinId}], null);
-              }
-            });
-          } else {
-            execInTab(S.tabId, VDI.Core.togglePiP, [null], null);
+          function triggerPiP(srcTabId, srcWinId) {
+            if (S.tabId !== null && srcTabId !== S.tabId) {
+              chrome.tabs.update(S.tabId, { active: true }, function() {
+                if (S.windowId !== null) {
+                  chrome.windows.update(S.windowId, { focused: true }, function() {
+                    execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: srcTabId, winId: srcWinId}], null);
+                  });
+                } else {
+                  execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: srcTabId, winId: srcWinId}], null);
+                }
+              });
+            } else {
+              execInTab(S.tabId, VDI.Core.togglePiP, [null], null);
+            }
           }
+
+          if (sender && sender.tab) {
+            triggerPiP(sender.tab.id, sender.tab.windowId);
+          } else {
+            try {
+              chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+                var tid = (tabs && tabs.length) ? tabs[0].id : null;
+                var wid = (tabs && tabs.length) ? tabs[0].windowId : null;
+                triggerPiP(tid, wid);
+              });
+            } catch (e) {
+              triggerPiP(null, null);
+            }
+          }
+          
         } else if (msg.act === 'jump') {
           if (S.tabId !== null) {
             chrome.tabs.update(S.tabId, { active: true });

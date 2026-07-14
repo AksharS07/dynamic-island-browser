@@ -1,14 +1,25 @@
 {
   "manifest_version": 3,
   "name": "Dynamic Island for Web",
-  "version": "1.2",
+  "version": "1.3",
   "description": "An Apple-style Dynamic Island for your browser! Syncs with media, extracts album colors, shows live lyrics, and adds PiP controls.",
   "icons": {
+    "16": "icon128.png",
+    "48": "icon128.png",
     "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon128.png",
+      "48": "icon128.png",
+      "128": "icon128.png"
+    }
   },
   "permissions": [
     "tabs",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"

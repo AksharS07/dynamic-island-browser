@@ -244,7 +244,7 @@ const { execSync } = require('child_process');
 function buildZip() {
   console.log('Building Extension ZIP...');
   const extDir = path.join(__dirname, 'chrome-extension');
-  const zipPath = path.join(__dirname, 'dynamic-island-extension-v1.2.zip');
+  const zipPath = path.join(__dirname, 'dynamic-island-extension-v1.3.zip');
   
   try {
     if (fs.existsSync(zipPath)) {

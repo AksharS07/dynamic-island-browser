@@ -1,4 +1,4 @@
-# Dynamic Island for Browsers (V1.2) (Tested ONLY for YouTube and YouTube Music)
+# Dynamic Island for Browsers (V1.3) (Tested ONLY for YouTube and YouTube Music)
 
 <p align="center">
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
@@ -27,6 +27,13 @@ There are two versions:
 </p>
 
 ---
+
+## What's New in V1.3 🚀
+
+- **Multi-Provider Lyrics Engine**: Fetches lyrics from both LyricsPlus and LRCLib simultaneously.
+- **Glassmorphic Provider Menu**: A sleek, interactive UI menu to swap between lyrics providers on the fly.
+- **Smart Fallback**: The island intelligently disables the lyrics button if no providers find matching lyrics for the playing track.
+- **Improved Performance**: Bugfixes and performance improvements for media synchronization.
 
 ## What's New in V1.2 🚀
 
@@ -61,7 +68,7 @@ There are two versions:
 *(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
 
 ### Installing the Chrome / Edge Extension:
-1. Download the latest **`dynamic-island-extension-v1.2.zip`** release file.
+1. Download the latest **`dynamic-island-extension-v1.3.zip`** release file.
 2. Extract the folder to a safe location on your computer.
 3. Open `chrome://extensions` (or `edge://extensions`).
 4. Enable **Developer Mode** using the toggle in the top right.

@@ -27,6 +27,9 @@ VDI.UI = (function() {
         '<div id="vdi-col-btn"><svg id="vdi-col-icon" viewBox="0 0 24 24" fill="white" width="10" height="10">' + VDI.Core.getPlayIcon(false) + '</svg></div>' +
       '</div>' +
       '<div id="vdi-exp">' +
+        '<button id="vdi-close-btn" title="Hide Island" style="position:absolute; top:12px; right:12px; z-index:100; background:rgba(255,255,255,0.1); border:none; border-radius:50%; width:24px; height:24px; color:rgba(255,255,255,0.6); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s;">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+        '</button>' +
         '<div id="vdi-art">' +
           '<div id="vdi-art-ph">\uD83C\uDFB5</div>' +
           '<img id="vdi-art-img" src="" alt="" crossorigin="anonymous"/>' +
@@ -72,7 +75,12 @@ VDI.UI = (function() {
           '<path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>' +
         '</svg>' +
       '</button>' +
-      '<div id="vdi-lyrics-scroll"></div>';
+      '<button id="vdi-resume-scroll-btn">Resume Autoscroll</button>' +
+      '<div id="vdi-lyrics-scroll"></div>' +
+      '<div id="vdi-prov-menu">' +
+        '<div class="vdi-prov-btn" id="vdi-prov-lp"><span class="vdi-prov-dot"></span> LyricsPlus</div>' +
+        '<div class="vdi-prov-btn" id="vdi-prov-lrc"><span class="vdi-prov-dot"></span> LRCLib</div>' +
+      '</div>';
     return panel;
   }
 
@@ -94,6 +102,9 @@ VDI.UI = (function() {
       lastArtTitle: null,
       supportsPiP: false,
       lyricsOn: false,
+      autoscroll: true,
+      isSeeking: false,
+      isPlayToggling: false,
       lyricsLines: [],
       lyricsIdx: -1,
       lastLyricsKey: '',
@@ -103,14 +114,34 @@ VDI.UI = (function() {
       hasNonLatin: false
     };
 
+    function performSeek(targetPos) {
+      state.isSeeking = true;
+      if (state.seekTimeout) clearTimeout(state.seekTimeout);
+      state.seekTimeout = setTimeout(function() {
+        state.isSeeking = false;
+      }, 1500);
+      
+      state.position = targetPos;
+      state.basePosition = targetPos;
+      state.lastSyncTime = Date.now();
+      
+      refreshProgress();
+      syncLyrics();
+      platform.sendAction(state.tabId, 'seek', targetPos);
+    }
+
     var idleTimer = null;
     var colTimer = null;
     var tickInterval = opts.tickInterval || 1000;
     var idleDelay = opts.idleDelay || 9000;
     var collapseDelay = opts.collapseDelay || 500;
+    var isDragging = false;
+    var settings = { hideYouTube: true, hideYouTubeMusic: false, enableLyrics: true, freePlacement: true };
 
     // Helper
     function $(id) { return document.getElementById(id); }
+
+    var cachedWords = null;
 
     // Theme application
     function applyTheme(c) {
@@ -131,6 +162,19 @@ VDI.UI = (function() {
       $('vdi-prog-fill').style.width = pct + '%';
       $('vdi-pos').textContent = VDI.Core.formatTime(state.position);
       $('vdi-dur').textContent = VDI.Core.formatTime(state.duration);
+
+      // Dynamically fill instrumental notes based on exact seek position
+      var instWrappers = document.querySelectorAll('.vdi-instrumental-wrapper');
+      for (var i = 0; i < instWrappers.length; i++) {
+        var start = parseFloat(instWrappers[i].getAttribute('data-start'));
+        var dur = parseFloat(instWrappers[i].getAttribute('data-dur'));
+        if (dur > 0) {
+          var progress = (state.position - start) / dur;
+          progress = Math.max(0, Math.min(1, progress));
+          var fill = instWrappers[i].querySelector('.vdi-note-fill');
+          if (fill) fill.style.clipPath = 'inset(' + (100 - (progress * 100)) + '% 0 0 0)';
+        }
+      }
     }
 
     // Update play/pause icons
@@ -141,9 +185,18 @@ VDI.UI = (function() {
     }
 
     // Main UI update
+    var manuallyClosed = false;
+
     function updateUI() {
       var isBrowserFs = document.getElementById('browser') && document.getElementById('browser').classList.contains('fullscreen');
-      var hideIsland = !state.hasMedia || state.isFullscreen || isBrowserFs || document.fullscreenElement;
+      
+      var onYTM = window.location.hostname.includes('music.youtube.com');
+      var onYT = window.location.hostname.includes('youtube.com') && !onYTM;
+      
+      var isHiddenByApp = (state.isMusicApp && settings.hideYouTubeMusic && onYTM) || 
+                          (state.isYouTubeVideo && settings.hideYouTube && onYT);
+      
+      var hideIsland = !state.hasMedia || state.isFullscreen || isBrowserFs || document.fullscreenElement || manuallyClosed || isHiddenByApp;
 
       if (hideIsland) {
         island.style.display = 'none';
@@ -153,6 +206,14 @@ VDI.UI = (function() {
       island.style.display = '';
       if (lyrPanel) lyrPanel.style.display = '';
       island.classList.add('vdi-visible');
+
+      var shouldShowLyrics = settings.enableLyrics && !state.isYouTubeVideo;
+      if ($('vdi-lyr-btn')) $('vdi-lyr-btn').style.display = shouldShowLyrics ? '' : 'none';
+      if (!shouldShowLyrics && state.lyricsOn) {
+        state.lyricsOn = false;
+        if ($('vdi-lyr-btn')) $('vdi-lyr-btn').classList.remove('active');
+        if (lyrPanel) lyrPanel.classList.remove('show');
+      }
 
       var label = [state.title, state.artist].filter(Boolean).join(' \u2014 ') || 'Now Playing';
       $('vdi-col-inner').textContent = label;
@@ -167,12 +228,7 @@ VDI.UI = (function() {
         $('vdi-pip-main-btn').style.display = 'none';
       }
 
-      if (state.isYouTubeVideo || state.hasLyrics === false) {
-        $('vdi-lyr-btn').style.display = 'none';
-      } else {
-        $('vdi-lyr-btn').style.display = 'flex';
-      }
-
+      // Lyrics button is handled by settings.enableLyrics above
       // Album art
       if (state.artwork && (state.artwork !== state.lastArtwork || state.title !== state.lastArtTitle)) {
         // If we already fetched high res for this exact title, and the background gave us the low res again, ignore it!
@@ -236,6 +292,35 @@ VDI.UI = (function() {
       refreshProgress();
     }
 
+    function updateLyricsPanelPosition() {
+      var lyr = $('vdi-lyrics-panel');
+      if (!lyr || !state.lyricsOn) return;
+      
+      var r = island.getBoundingClientRect();
+      var islandTop = r.top;
+      var islandLeft = r.left + (r.width / 2);
+      var expH = 152;
+      
+      var ch = window.innerHeight;
+      
+      // Horizontal: center with island (left is already centered via transform)
+      lyr.style.left = islandLeft + 'px';
+      
+      // Vertical: flip based on screen half
+      if (islandTop > ch / 2 - (expH / 2)) {
+        // Bottom half: put above
+        lyr.style.top = 'auto';
+        lyr.style.bottom = (ch - islandTop + 16) + 'px';
+        lyr.style.maxHeight = Math.max(100, islandTop - 32) + 'px';
+      } else {
+        // Top half: put below the fully expanded island
+        var islandBottom = islandTop + expH;
+        lyr.style.bottom = 'auto';
+        lyr.style.top = (islandBottom + 16) + 'px';
+        lyr.style.maxHeight = Math.max(100, ch - islandBottom - 32) + 'px';
+      }
+    }
+
     // Lyrics handling
     function fetchAndRenderLyrics() {
       var key = state.title + '|' + state.artist;
@@ -244,58 +329,104 @@ VDI.UI = (function() {
       state.lyricsIdx = -1;
       state.lyricsSynced = false;
       state.hasLyrics = undefined;
+      state.multiLyrics = null;
+      if (!state.selectedProvider) state.selectedProvider = 'lyricsplus';
 
       $('vdi-lyr-btn').classList.add('loading');
+      $('vdi-lyr-btn').style.pointerEvents = 'auto'; // Reset
       $('vdi-lyr-btn').innerHTML = '<div class="vdi-loading-dots"><span></span><span></span><span></span></div>';
       $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;">Loading lyrics...</div>';
 
+      function handleMultiResult(res, k) {
+        if (k !== state.lastLyricsKey) return;
+        if (!res) res = { lyricsplus: null, lrclib: null };
+        state.multiLyrics = res;
+        
+        // Auto-select provider
+        if (state.selectedProvider === 'lyricsplus' && !res.lyricsplus && res.lrclib) {
+          state.selectedProvider = 'lrclib';
+        } else if (state.selectedProvider === 'lrclib' && !res.lrclib && res.lyricsplus) {
+          state.selectedProvider = 'lyricsplus';
+        } else if (!res.lyricsplus && !res.lrclib) {
+          state.selectedProvider = 'lyricsplus'; // Default on total failure
+        }
+        
+        renderLyricsData(key);
+      }
+
       try {
-        var cached = localStorage.getItem('vdi_lyr_' + key);
+        var cached = localStorage.getItem('vdi_lyr_multi_' + key);
         if (cached) {
           var data = JSON.parse(cached);
           if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
-            // Use cached if < 24h old
-            renderLyricsData(data.lines, data.synced, data.url, key);
+            handleMultiResult(data.payload, key);
             return;
           }
         }
       } catch(e) {}
 
-      VDI.Core.fetchLyrics(state.title, state.artist, state.duration, function(lines, synced, url) {
-        if (key !== state.lastLyricsKey) return;
-        
-        if (lines) {
+      VDI.Core.fetchLyrics(state.title, state.artist, state.duration, function(result) {
+        if (result) {
           try {
-            localStorage.setItem('vdi_lyr_' + key, JSON.stringify({ lines: lines, synced: synced, url: url, timestamp: Date.now() }));
+            localStorage.setItem('vdi_lyr_multi_' + key, JSON.stringify({ 
+              payload: result,
+              timestamp: Date.now() 
+            }));
           } catch (e) {}
         }
-        renderLyricsData(lines, synced, url, key);
+        handleMultiResult(result, key);
       });
-
     }
 
-    function renderLyricsData(lines, synced, url, key) {
+    window.vdiSwitchProvider = function(prov) {
+      if (!state.multiLyrics || !state.multiLyrics[prov]) return; // Cannot switch to null provider
+      state.selectedProvider = prov;
+      renderLyricsData(state.lastLyricsKey);
+    };
+
+    function renderLyricsData(key) {
         if (key !== state.lastLyricsKey) return;
+        var m = state.multiLyrics || { lyricsplus: null, lrclib: null };
+        var provData = m[state.selectedProvider];
+        var lines = provData ? provData.lines : [];
+        var synced = provData ? provData.synced : false;
+        var shouldShowLyrics = settings.enableLyrics && !state.isYouTubeVideo;
 
         $('vdi-lyr-btn').classList.remove('loading');
         $('vdi-lyr-btn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
 
-        if (!lines || !lines.length) {
+        var hasAny = (m.lyricsplus !== null || m.lrclib !== null);
+
+        if (!hasAny) {
           state.hasLyrics = false;
-          $('vdi-lyr-btn').style.display = 'none';
-          if (state.lyricsOn) {
-            state.lyricsOn = false;
-            var panel = $('vdi-lyrics-panel');
-            if (panel) panel.classList.remove('show');
-            resetIdle();
-          }
+          $('vdi-lyr-btn').style.display = shouldShowLyrics ? 'flex' : 'none';
+          $('vdi-lyr-btn').style.opacity = '0.2';
+          $('vdi-lyr-btn').style.pointerEvents = 'none'; // Completely disable
+          
+          $('vdi-lyrics-scroll').innerHTML = '<div class="vdi-lyric-line unsynced" style="text-align:center;margin-top:50px;color:rgba(255,255,255,0.4);font-size:16px;">Lyrics not found for this track.</div>';
+          var romBtn = $('vdi-romanize-btn');
+          if (romBtn) romBtn.style.display = 'none';
           return;
         }
 
+        // We have lyrics on at least one provider.
         state.hasLyrics = true;
+        $('vdi-lyr-btn').style.opacity = '1';
+        $('vdi-lyr-btn').style.pointerEvents = 'auto';
+        $('vdi-lyr-btn').style.display = shouldShowLyrics ? 'flex' : 'none';
+        
         state.lyricsLines = lines;
         state.lyricsSynced = synced;
+        state.hasWords = provData ? provData.hasWords : false;
 
+        // Update provider menu UI
+        var btnLp = $('vdi-prov-lp');
+        var btnLrc = $('vdi-prov-lrc');
+        if (btnLp && btnLrc) {
+          btnLp.className = 'vdi-prov-btn' + (m.lyricsplus ? ' has-lyr' : '') + (state.selectedProvider === 'lyricsplus' ? ' active' : '');
+          btnLrc.className = 'vdi-prov-btn' + (m.lrclib ? ' has-lyr' : '') + (state.selectedProvider === 'lrclib' ? ' active' : '');
+        }
+        
         // Detect if any lines have non-Latin script
         var anyNonLatin = false;
         var hasKanjiOrKana = function(t) {
@@ -319,7 +450,9 @@ VDI.UI = (function() {
 
         var html = '';
         for (var k = 0; k < lines.length; k++) {
-          var cls = synced ? 'vdi-lyric-line' : 'vdi-lyric-line unsynced';
+          var cls = 'vdi-lyric-line';
+          if (state.hasWords && lines[k].words && lines[k].words.length > 0) cls += ' has-words';
+          if (!synced) cls += ' unsynced';
           var text = lines[k].text || '&nbsp;';
           var wordsHtml = '&nbsp;';
           
@@ -331,16 +464,25 @@ VDI.UI = (function() {
             duration = 4; // last line
           }
 
-          if (text.indexOf('♪') > -1 || text.indexOf('♫') > -1 || text === '♪') {
+          var isInst = text.indexOf('♪') > -1 || text.indexOf('♫') > -1 || !lines[k].text || lines[k].text.trim() === '';
+          if (isInst) {
             var notePath = 'M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z';
-            wordsHtml = '<div class="vdi-instrumental-wrapper"><div class="vdi-instrumental">' +
+            wordsHtml = '<div class="vdi-instrumental-wrapper" data-start="' + lines[k].time + '" data-dur="' + duration + '"><div class="vdi-instrumental">' +
               '<svg class="vdi-note-bg" viewBox="0 0 24 24"><path d="' + notePath + '"/></svg>' +
               '<svg class="vdi-note-fill" viewBox="0 0 24 24"><path d="' + notePath + '"/></svg>' +
             '</div></div>';
             cls += ' vdi-lyr-inst vdi-instrumental-break';
           } else {
-            // Full line highlight nicely instead of word-by-word
-            wordsHtml = '<span class="vdi-full-line" style="--line-dur: ' + duration + 's;">' + text.replace(/\n/g, '<br>') + '</span>';
+            // Full line highlight or word-by-word highlight
+            if (state.hasWords && lines[k].words && lines[k].words.length > 0) {
+              wordsHtml = '';
+              for (var w = 0; w < lines[k].words.length; w++) {
+                var word = lines[k].words[w];
+                wordsHtml += '<span class="vdi-lyric-word" data-start="' + word.time + '" style="--w-dur: ' + Math.max(0.2, word.duration) + 's;">' + word.text + '</span>';
+              }
+            } else {
+              wordsHtml = text.replace(/\n/g, '<br>');
+            }
           }
 
           var transHtml = '';
@@ -351,7 +493,7 @@ VDI.UI = (function() {
           html += '<div class="' + cls + '" id="vdi-lyr-' + k + '">' + wordsHtml + transHtml + '</div>';
         }
         $('vdi-lyrics-scroll').innerHTML = html;
-        $('vdi-lyr-btn').style.display = state.isYouTubeVideo ? 'none' : 'flex';
+        $('vdi-lyr-btn').style.display = shouldShowLyrics ? 'flex' : 'none';
 
         // Async fetch romanization if needed
         if (anyNonLatin && VDI.Core.batchRomanize) {
@@ -415,9 +557,7 @@ VDI.UI = (function() {
               if (lineEl) {
                 lineEl.addEventListener('click', function(e) {
                   e.stopPropagation();
-                  state.position = tTarget;
-                  refreshProgress();
-                  platform.sendAction(state.tabId, 'seek', tTarget);
+                  performSeek(tTarget);
                 });
               }
             })(lines[n].time, n);
@@ -429,29 +569,70 @@ VDI.UI = (function() {
       if (!state.lyricsLines.length || !state.lyricsSynced) return;
 
       var pos = state.position;
+      // Add a tiny lookahead so CSS transitions finish exactly on the sung word
+      var lookahead = 0.1;
+      
       var idx = -1;
 
       for (var i = state.lyricsLines.length - 1; i >= 0; i--) {
-        if (state.lyricsLines[i].time <= pos + 0.3) {
+        if (state.lyricsLines[i].time <= pos + 0.1) {
           idx = i;
           break;
         }
       }
 
-      if (idx !== state.lyricsIdx && idx >= 0) {
-        if (state.lyricsIdx >= 0) {
-          var old = $('vdi-lyr-' + state.lyricsIdx);
-          if (old) old.classList.remove('active');
+      if (idx !== state.lyricsIdx) {
+        var prevActive = document.querySelector('.vdi-lyric-line.active');
+        if (prevActive) {
+          prevActive.classList.remove('active');
+          if (state.hasWords) {
+            var activeWords = prevActive.querySelectorAll('.vdi-lyric-word.active-word');
+            for (var j = 0; j < activeWords.length; j++) {
+              activeWords[j].classList.remove('active-word');
+            }
+          }
         }
-        state.lyricsIdx = idx;
-        var cur = $('vdi-lyr-' + idx);
-        if (cur) {
-          cur.classList.add('active');
-          if (state.lyricsOn) {
-            cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        var newActive = $('vdi-lyr-' + idx);
+        if (newActive) {
+          newActive.classList.add('active');
+          if (state.lyricsOn && state.autoscroll) {
+            newActive.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          if (state.hasWords) {
+            var wEls = newActive.querySelectorAll('.vdi-lyric-word');
+            cachedWords = [];
+            for (var w = 0; w < wEls.length; w++) {
+              cachedWords.push({
+                el: wEls[w],
+                start: parseFloat(wEls[w].getAttribute('data-start')),
+                isActive: false
+              });
+            }
+          }
+        } else {
+          cachedWords = null;
+        }
+      }
+
+      if (state.hasWords && cachedWords) {
+        for (var w = 0; w < cachedWords.length; w++) {
+          if (cachedWords[w].start <= pos + lookahead) {
+            if (!cachedWords[w].isActive) {
+              cachedWords[w].el.classList.add('active-word');
+              cachedWords[w].isActive = true;
+            }
+          } else {
+            if (cachedWords[w].isActive) {
+              cachedWords[w].el.classList.remove('active-word');
+              cachedWords[w].isActive = false;
+            }
           }
         }
       }
+
+      state.lyricsIdx = idx;
     }
 
     // Idle handling
@@ -477,10 +658,12 @@ VDI.UI = (function() {
         island.classList.remove('vdi-idle');
       }
       island.classList.add('vdi-expanded');
+
       resetIdle();
     }
 
     function handleMouseLeave() {
+      if (isDragging) return;
       clearTimeout(colTimer);
       colTimer = setTimeout(function() {
         island.classList.remove('vdi-expanded');
@@ -495,6 +678,112 @@ VDI.UI = (function() {
 
     // Event binding
     function bindEvents() {
+      // --- Draggable Logic ---
+      var dragStartX = 0;
+      var dragStartY = 0;
+      var startLeftCenter = 0;
+      var startTop = 0;
+
+      island.addEventListener('mousedown', function(e) {
+        if (!settings.freePlacement) return;
+        if (e.target.closest('button, svg, #vdi-prog, #vdi-lyrics-scroll, a')) return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        var rect = island.getBoundingClientRect();
+        startLeftCenter = rect.left + (rect.width / 2);
+        startTop = rect.top;
+        island.style.transition = 'none';
+
+        // Show snap zones
+        if (!$('vdi-snap-zones')) {
+          var sz = document.createElement('div');
+          sz.id = 'vdi-snap-zones';
+          sz.innerHTML = '<div class="vdi-sz vdi-sz-t"></div><div class="vdi-sz vdi-sz-b"></div><div class="vdi-sz vdi-sz-l"></div><div class="vdi-sz vdi-sz-r"></div>';
+          document.body.appendChild(sz);
+        }
+        $('vdi-snap-zones').classList.add('active');
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        var dx = e.clientX - dragStartX;
+        var dy = e.clientY - dragStartY;
+        var newLeftCenter = startLeftCenter + dx;
+        var newTop = startTop + dy;
+
+        // Magnetic Snapping
+        var midX = window.innerWidth / 2;
+        var midY = window.innerHeight / 2;
+        var expW = 400;
+        var expH = 152;
+        var snapD = 40;
+        
+        var activeZone = null;
+
+        if (newTop < snapD && Math.abs(newLeftCenter - midX) < snapD) {
+          newTop = 10; newLeftCenter = midX;
+          activeZone = 't';
+        } else if (newTop > window.innerHeight - expH - snapD && Math.abs(newLeftCenter - midX) < snapD) {
+          newTop = window.innerHeight - expH - 10; newLeftCenter = midX;
+          activeZone = 'b';
+        } else if (newLeftCenter - (expW/2) < snapD && Math.abs(newTop + (expH/2) - midY) < snapD) {
+          newLeftCenter = (expW/2) + 10; newTop = midY - (expH/2);
+          activeZone = 'l';
+        } else if (newLeftCenter + (expW/2) > window.innerWidth - snapD && Math.abs(newTop + (expH/2) - midY) < snapD) {
+          newLeftCenter = window.innerWidth - (expW/2) - 10; newTop = midY - (expH/2);
+          activeZone = 'r';
+        }
+
+        // Highlight active zone
+        if ($('vdi-snap-zones')) {
+          var szs = $('vdi-snap-zones').children;
+          szs[0].classList.toggle('active', activeZone === 't');
+          szs[1].classList.toggle('active', activeZone === 'b');
+          szs[2].classList.toggle('active', activeZone === 'l');
+          szs[3].classList.toggle('active', activeZone === 'r');
+        }
+
+        // Clamp to edges using expanded dimensions to prevent spillover
+        var minLeftCenter = (expW / 2) + 10;
+        var maxLeftCenter = window.innerWidth - (expW / 2) - 10;
+        newLeftCenter = Math.max(minLeftCenter, Math.min(newLeftCenter, maxLeftCenter));
+
+        var maxTop = window.innerHeight - expH - 10;
+        newTop = Math.max(10, Math.min(newTop, maxTop));
+
+        // Always keep it centered via transform to ensure symmetrical width expansion!
+        island.style.left = newLeftCenter + 'px';
+        island.style.top = newTop + 'px';
+        island.style.transform = 'translateX(-50%)';
+        
+        if (state.lyricsOn) {
+          updateLyricsPanelPosition();
+        }
+      });
+
+      document.addEventListener('mouseup', function(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        island.style.transition = '';
+        if ($('vdi-snap-zones')) $('vdi-snap-zones').classList.remove('active');
+        
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.set({
+            'vdi_pos_x': island.style.left,
+            'vdi_pos_y': island.style.top,
+            'vdi_transform': island.style.transform,
+            'activePreset': null
+          });
+        } else {
+          localStorage.setItem('vdi_pos_x', island.style.left);
+          localStorage.setItem('vdi_pos_y', island.style.top);
+          localStorage.setItem('vdi_transform', island.style.transform);
+        }
+      });
+      // -----------------------
+
       island.addEventListener('mouseenter', handleMouseEnter);
       island.addEventListener('mouseleave', handleMouseLeave);
       lyrPanel.addEventListener('mouseenter', handleMouseEnter);
@@ -506,6 +795,23 @@ VDI.UI = (function() {
         if (e.clientX >= r.left - 80 && e.clientX <= r.right + 80 &&
             e.clientY >= r.top - 60 && e.clientY <= r.bottom + 60) {
           resetIdle();
+        }
+      });
+
+      // Cancel drag if mouse leaves window or document loses focus
+      document.addEventListener('mouseleave', function(e) {
+        if (isDragging) {
+          isDragging = false;
+          if ($('vdi-snap-zones')) $('vdi-snap-zones').classList.remove('active');
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ 'vdi_pos_x': island.style.left, 'vdi_pos_y': island.style.top, 'vdi_transform': island.style.transform, 'activePreset': null });
+          }
+        }
+      });
+      window.addEventListener('blur', function() {
+        if (isDragging) {
+          isDragging = false;
+          if ($('vdi-snap-zones')) $('vdi-snap-zones').classList.remove('active');
         }
       });
 
@@ -525,20 +831,35 @@ VDI.UI = (function() {
         platform.sendAction(state.tabId, 'next');
       });
 
+      if ($('vdi-close-btn')) {
+        $('vdi-close-btn').addEventListener('click', function(e) {
+          e.stopPropagation();
+          manuallyClosed = true;
+          updateUI();
+        });
+      }
+
+
+
       $('vdi-play').addEventListener('click', function(e) {
         e.stopPropagation();
         platform.sendAction(state.tabId, 'toggle');
         state.isPlaying = !state.isPlaying;
         setPlayIcon(state.isPlaying);
+
+        state.isPlayToggling = true;
+        if (state.playToggleTimeout) clearTimeout(state.playToggleTimeout);
+        state.playToggleTimeout = setTimeout(function() {
+          state.isPlayToggling = false;
+        }, 1500);
       });
 
       $('vdi-prog').addEventListener('click', function(e) {
         e.stopPropagation();
         if (!state.duration) return;
         var r = e.currentTarget.getBoundingClientRect();
-        state.position = ((e.clientX - r.left) / r.width) * state.duration;
-        refreshProgress();
-        platform.sendAction(state.tabId, 'seek', state.position);
+        var targetPos = ((e.clientX - r.left) / r.width) * state.duration;
+        performSeek(targetPos);
       });
 
       $('vdi-pip-main-btn').addEventListener('click', function(e) {
@@ -560,30 +881,78 @@ VDI.UI = (function() {
 
         if (state.lyricsOn) {
           lyrPanel.classList.add('show');
-          if (state.lyricsSynced && state.lyricsIdx >= 0) {
+          updateLyricsPanelPosition();
+
+          if (state.lyricsSynced && state.lyricsIdx >= 0 && state.autoscroll) {
             var cur = $('vdi-lyr-' + state.lyricsIdx);
-            if (cur) cur.scrollIntoView({ behavior: 'auto', block: 'center' });
+            if (cur) {
+              setTimeout(function() {
+                cur.scrollIntoView({ behavior: 'auto', block: 'center' });
+              }, 50);
+            }
           }
         } else {
           lyrPanel.classList.remove('show');
         }
       });
+
+      // Autoscroll handling
+      var scrollEl = $('vdi-lyrics-scroll');
+      if (scrollEl) {
+        var disableAutoscroll = function() {
+          if (state.autoscroll) {
+            state.autoscroll = false;
+            var btn = $('vdi-resume-scroll-btn');
+            if (btn) btn.classList.add('show');
+          }
+        };
+        scrollEl.addEventListener('wheel', disableAutoscroll, { passive: true });
+        scrollEl.addEventListener('touchmove', disableAutoscroll, { passive: true });
+      }
+
+      var resBtn = $('vdi-resume-scroll-btn');
+      if (resBtn) {
+        resBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          state.autoscroll = true;
+          resBtn.classList.remove('show');
+          if (state.lyricsIdx > -1) {
+            var cur = $('vdi-lyr-' + state.lyricsIdx);
+            if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }
+
+      var provLp = $('vdi-prov-lp');
+      if (provLp) {
+        provLp.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (window.vdiSwitchProvider) window.vdiSwitchProvider('lyricsplus');
+        });
+      }
+
+      var provLrc = $('vdi-prov-lrc');
+      if (provLrc) {
+        provLrc.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (window.vdiSwitchProvider) window.vdiSwitchProvider('lrclib');
+        });
+      }
     }
 
     // Tick update
-    var lastTickTime = Date.now();
     function startTick() {
-      setInterval(function() {
-        var now = Date.now();
-        var dt = (now - lastTickTime) / 1000.0;
-        lastTickTime = now;
-        
-        if (state.isPlaying && state.duration > 0) {
-          state.position = Math.min(state.duration, state.position + dt);
+      // Use requestAnimationFrame for buttery smooth UI updates
+      function tick() {
+        if (!state.isSeeking && state.isPlaying && state.duration > 0 && state.lastSyncTime) {
+          var elapsed = (Date.now() - state.lastSyncTime) / 1000.0;
+          state.position = Math.min(state.duration, state.basePosition + elapsed);
           refreshProgress();
         }
         syncLyrics();
-      }, 50);
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
 
       // EQ animation
       setInterval(function() {
@@ -622,17 +991,31 @@ VDI.UI = (function() {
       var prevKey = state.title + '|' + state.artist;
 
       state.hasMedia = newState.hasMedia;
-      state.isPlaying = newState.isPlaying;
+      if (!state.isPlayToggling) {
+        state.isPlaying = newState.isPlaying;
+      }
       state.title = newState.title;
       state.artist = newState.artist;
       state.artwork = newState.artwork;
       state.duration = newState.duration;
       
-      // Drift check constraint to prevent stuttering
-      // Only forcefully overwrite the UI's smooth-scrolled position if it drifts by >2.0s or if media just started/paused
-      if (Math.abs(state.position - newState.position) > 2.0 || newState.position === 0 || !newState.isPlaying) {
-        state.position = newState.position;
+      // Use exact clock interpolation instead of dt accumulation
+      if (!state.isSeeking) {
+        var now = Date.now();
+        var latency = newState.timestamp ? (now - newState.timestamp) / 1000.0 : 0;
+        var newBase = newState.position + latency;
+        var elapsed = (now - state.lastSyncTime) / 1000.0;
+        var currentPredicted = (state.basePosition || 0) + elapsed;
+        
+        // Only violently snap the clock if we drifted by more than 0.3s.
+        // Otherwise, trust our local 60FPS coasting timer to prevent micro-stutters!
+        if (!state.lastSyncTime || Math.abs(currentPredicted - newBase) > 0.3) {
+          state.basePosition = newBase;
+          state.lastSyncTime = now;
+          state.position = state.basePosition;
+        }
       }
+
       state.supportsPiP = newState.supportsPiP;
       state.isFullscreen = newState.isFullscreen;
       state.isYouTubeVideo = newState.isYouTubeVideo;
@@ -654,6 +1037,87 @@ VDI.UI = (function() {
 
     // Initialize
     function init() {
+      function applyPos(x, y, tf) {
+        if (!x || !y) return;
+        var midX = window.innerWidth / 2;
+        var midY = window.innerHeight / 2;
+        var expW = 400;
+        var expH = 152;
+
+        if (x === 'CENTER') x = midX + 'px';
+        if (x === 'RIGHT') x = (window.innerWidth - (expW/2) - 10) + 'px';
+        if (x === 'LEFT') x = ((expW/2) + 10) + 'px';
+        
+        if (y === 'TOP') y = '10px';
+        if (y === 'BOTTOM') y = (window.innerHeight - expH - 10) + 'px';
+        if (y === 'MIDDLE') y = (midY - (expH/2)) + 'px';
+
+        island.style.left = x;
+        island.style.top = y;
+        island.style.transform = tf || 'none';
+        
+        if (state.lyricsOn) {
+          // Give it a frame to apply CSS before measuring bounds
+          requestAnimationFrame(updateLyricsPanelPosition);
+        }
+      }
+
+
+
+      window.addEventListener('resize', function() {
+        if (!state.hasMedia) return;
+        var expW = 400;
+        var expH = 152;
+        
+        // Clamp island position to new viewport bounds
+        var minLeftCenter = (expW / 2) + 10;
+        var maxLeftCenter = window.innerWidth - (expW / 2) - 10;
+        var currentLeftStr = island.style.left || '';
+        var currentLeft = window.innerWidth / 2;
+        if (currentLeftStr.indexOf('%') !== -1) {
+          currentLeft = window.innerWidth * (parseFloat(currentLeftStr) / 100);
+        } else if (currentLeftStr) {
+          currentLeft = parseFloat(currentLeftStr);
+        }
+        var newLeftCenter = Math.max(minLeftCenter, Math.min(currentLeft, maxLeftCenter));
+        
+        var maxTop = window.innerHeight - expH - 10;
+        var currentTop = parseFloat(island.style.top) || 10;
+        var newTop = Math.max(10, Math.min(currentTop, maxTop));
+        
+        island.style.left = newLeftCenter + 'px';
+        island.style.top = newTop + 'px';
+        
+        if (state.lyricsOn) {
+          updateLyricsPanelPosition();
+        }
+      });
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(null, function(res) {
+          applyPos(res.vdi_pos_x, res.vdi_pos_y, res.vdi_transform);
+          if (res.hideYouTube !== undefined) settings.hideYouTube = res.hideYouTube;
+          if (res.hideYouTubeMusic !== undefined) settings.hideYouTubeMusic = res.hideYouTubeMusic;
+          if (res.enableLyrics !== undefined) settings.enableLyrics = res.enableLyrics;
+          if (res.freePlacement !== undefined) settings.freePlacement = res.freePlacement;
+          updateUI();
+        });
+
+        chrome.storage.onChanged.addListener(function(changes) {
+          if (changes.vdi_pos_x || changes.vdi_pos_y || changes.vdi_transform) {
+            chrome.storage.local.get(['vdi_pos_x', 'vdi_pos_y', 'vdi_transform'], function(res) {
+              applyPos(res.vdi_pos_x, res.vdi_pos_y, res.vdi_transform);
+            });
+          }
+          if (changes.hideYouTube) settings.hideYouTube = changes.hideYouTube.newValue;
+          if (changes.hideYouTubeMusic) settings.hideYouTubeMusic = changes.hideYouTubeMusic.newValue;
+          if (changes.enableLyrics) settings.enableLyrics = changes.enableLyrics.newValue;
+          if (changes.freePlacement) settings.freePlacement = changes.freePlacement.newValue;
+          updateUI();
+        });
+      } else {
+        applyPos(localStorage.getItem('vdi_pos_x'), localStorage.getItem('vdi_pos_y'), localStorage.getItem('vdi_transform'));
+      }
+
       bindEvents();
       startTick();
       setupFullscreen();

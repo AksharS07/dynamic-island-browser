@@ -13,7 +13,7 @@ VDI.Core = (function() {
   // ─────────────────────────────────────────────────────────────
   function formatTime(s) {
     if (!s || !isFinite(s) || s < 0) return '0:00';
-    s = Math.floor(s);
+    s = Math.round(s);
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
   }
 
@@ -162,108 +162,180 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Lyrics fetching from lrclib.net
+  // Lyrics fetching from LyricsPlus (Primary) & LRCLib (Fallback)
   // ─────────────────────────────────────────────────────────────
   var LYRICS_API = 'https://lrclib.net/api/search';
+  var LYRICS_PLUS_API = 'https://lyricsplus.binimum.org/v2/lyrics/get';
 
   function fetchLyrics(title, artist, duration, cb) {
     var cleanTitle = title.replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
     var cleanArtist = (artist || '').replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
     
-    var q = cleanTitle + ' ' + cleanArtist;
-    var params = 'q=' + encodeURIComponent(q.trim());
-    var targetUrl = LYRICS_API + '?' + params;
-
-    function parseLRCLib(data) {
-      if (!data) return null;
-      var lines = [];
-      var synced = false;
-      if (data.syncedLyrics) {
-        synced = true;
-        var raw = data.syncedLyrics.split('\n');
-        var rawLines = [];
-        for (var i = 0; i < raw.length; i++) {
-          var m = raw[i].match(/\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
-          if (m) {
-            rawLines.push({
-              time: parseInt(m[1]) * 60 + parseFloat(m[2]),
-              text: m[3].trim(),
-              translation: ''
-            });
-          }
-        }
-        rawLines.sort(function(a, b) { return a.time - b.time; });
-        for (var i = 0; i < rawLines.length; i++) {
-          var text = rawLines[i].text;
-          // If empty text, check if there's a significant gap (instrumental break)
-          if (!text) {
-            var nextIdx = -1;
-            for (var j = i + 1; j < rawLines.length; j++) {
-              if (rawLines[j].text) { nextIdx = j; break; }
-            }
-            var gap = nextIdx > -1 ? rawLines[nextIdx].time - rawLines[i].time : 0;
-            if (gap >= 5) {
-              // This is an instrumental break — insert a ♪ marker
-              lines.push({ time: rawLines[i].time, text: '♪', translation: '' });
-            }
-            continue;
-          }
-          lines.push(rawLines[i]);
-        }
-        // Also check for a long intro before the first lyric
-        if (lines.length > 0 && lines[0].time >= 5) {
-          lines.unshift({ time: 0, text: '♪', translation: '' });
-        }
-      } else if (data.plainLyrics) {
-        synced = false;
-        var plines = data.plainLyrics.split('\n');
-        for (var j = 0; j < plines.length; j++) {
-          lines.push({ time: 0, text: plines[j].trim() });
-        }
-      }
-      if (lines.length === 0) return null;
-      var trackUrl = data.id ? 'https://lrclib.net/track/' + data.id : 'https://lrclib.net';
-      return { lines: lines, synced: synced, url: trackUrl };
-    }
-
-    function doFetch(url, isProxy) {
-      fetch(url)
+    var lpPromise = new Promise(function(resolve, reject) {
+      var lpParams = 'title=' + encodeURIComponent(cleanTitle) + '&artist=' + encodeURIComponent(cleanArtist);
+      if (duration > 0) lpParams += '&duration=' + Math.round(duration);
+      
+      fetch(LYRICS_PLUS_API + '?' + lpParams)
         .then(function(res) {
-          if (!res.ok) throw new Error('Bad status');
+          if (!res.ok) throw new Error('LyricsPlus status: ' + res.status);
           return res.json();
         })
-        .then(function(responseData) {
-          var data = null;
-          if (Array.isArray(responseData)) {
-            for (var i = 0; i < responseData.length; i++) {
-              if (responseData[i].syncedLyrics) {
-                data = responseData[i];
-                break;
+        .then(function(data) {
+          if (!data || data.error || !data.lyrics || data.lyrics.length === 0) {
+            throw new Error('No lyrics found in LyricsPlus');
+          }
+          var lines = [];
+          var synced = (data.type === 'Line' || data.type === 'Word' || data.type === 'Syllable');
+          var hasWords = (data.type === 'Word' || data.type === 'Syllable');
+          
+          for (var i = 0; i < data.lyrics.length; i++) {
+            var line = data.lyrics[i];
+            if (!line.text) continue;
+            var l = {
+              time: line.time / 1000.0,
+              text: line.text,
+              translation: '',
+              words: []
+            };
+            if (hasWords && line.syllabus && line.syllabus.length > 0) {
+              for (var j = 0; j < line.syllabus.length; j++) {
+                var syl = line.syllabus[j];
+                l.words.push({
+                  time: syl.time / 1000.0,
+                  duration: syl.duration / 1000.0,
+                  text: syl.text
+                });
               }
             }
-            if (!data && responseData.length > 0) data = responseData[0];
-          } else {
-            data = responseData;
+            lines.push(l);
           }
-          
-          var result = parseLRCLib(data);
-          if (result) {
-            cb(result.lines, result.synced, result.url);
-          } else {
-            throw new Error('No lyrics in response');
+          if (lines.length > 0 && lines[0].time >= 5) {
+            lines.unshift({ time: 0, text: '♪', translation: '', words: [] });
           }
-        })
-        .catch(function(err) {
-          if (!isProxy) {
-            // Fallback to proxy to bypass Vivaldi CORS/Cloudflare UA blocks
-            doFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl), true);
+          if (lines.length > 0) {
+            resolve({ lines: lines, synced: synced, url: 'https://lyricsplus.binimum.org', hasWords: hasWords });
           } else {
-            cb(null, null);
+            throw new Error('Empty parsed lyrics');
           }
-        });
-    }
+        }).catch(reject);
+    });
 
-    doFetch(targetUrl, false);
+    var lrcPromise = new Promise(function(resolve, reject) {
+      var q = cleanTitle + ' ' + cleanArtist;
+      var targetUrl = LYRICS_API + '?q=' + encodeURIComponent(q.trim());
+
+      function parseLRCLib(data) {
+        if (!data) return null;
+        var lines = [];
+        var synced = false;
+        if (data.syncedLyrics) {
+          synced = true;
+          var raw = data.syncedLyrics.split('\n');
+          var rawLines = [];
+          for (var i = 0; i < raw.length; i++) {
+            var m = raw[i].match(/\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
+            if (m) {
+              var lineTime = parseInt(m[1]) * 60 + parseFloat(m[2]);
+              var rawText = m[3].trim();
+              var wordsArray = [];
+              var wordRegex = /<(\d+):(\d+(?:\.\d+)?)>([^<]+)/g;
+              var wMatch, hasEnhanced = false, cleanText = rawText;
+              
+              if (rawText.indexOf('<') !== -1 && rawText.indexOf('>') !== -1) {
+                while ((wMatch = wordRegex.exec(rawText)) !== null) {
+                  hasEnhanced = true;
+                  wordsArray.push({
+                    time: parseInt(wMatch[1]) * 60 + parseFloat(wMatch[2]),
+                    duration: 0.2,
+                    text: wMatch[3].trim()
+                  });
+                }
+              }
+              if (hasEnhanced && wordsArray.length > 0) {
+                cleanText = '';
+                for (var w = 0; w < wordsArray.length; w++) {
+                  cleanText += wordsArray[w].text + ' ';
+                  if (w < wordsArray.length - 1) wordsArray[w].duration = wordsArray[w+1].time - wordsArray[w].time;
+                }
+                cleanText = cleanText.trim();
+                synced = true;
+              }
+              rawLines.push({ time: lineTime, text: cleanText, translation: '', words: wordsArray });
+            }
+          }
+          rawLines.sort(function(a, b) { return a.time - b.time; });
+          for (var i = 0; i < rawLines.length; i++) {
+            var text = rawLines[i].text;
+            if (!text) {
+              var nextIdx = -1;
+              for (var j = i + 1; j < rawLines.length; j++) {
+                if (rawLines[j].text) { nextIdx = j; break; }
+              }
+              var gap = nextIdx > -1 ? rawLines[nextIdx].time - rawLines[i].time : 0;
+              if (gap >= 5) lines.push({ time: rawLines[i].time, text: '♪', translation: '', words: [] });
+              continue;
+            }
+            lines.push(rawLines[i]);
+          }
+          if (lines.length > 0 && lines[0].time >= 5) lines.unshift({ time: 0, text: '♪', translation: '', words: [] });
+        } else if (data.plainLyrics) {
+          synced = false;
+          var plines = data.plainLyrics.split('\n');
+          for (var j = 0; j < plines.length; j++) lines.push({ time: 0, text: plines[j].trim(), words: [] });
+        }
+        if (lines.length === 0) return null;
+        var trackUrl = data.id ? 'https://lrclib.net/track/' + data.id : 'https://lrclib.net';
+        return { lines: lines, synced: synced, url: trackUrl };
+      }
+
+      function doFetch(url, isProxy) {
+        fetch(url)
+          .then(function(res) {
+            if (!res.ok) throw new Error('Bad status');
+            return res.json();
+          })
+          .then(function(responseData) {
+            var data = null;
+            if (Array.isArray(responseData)) {
+              for (var i = 0; i < responseData.length; i++) {
+                if (responseData[i].syncedLyrics) { data = responseData[i]; break; }
+              }
+              if (!data && responseData.length > 0) data = responseData[0];
+            } else {
+              data = responseData;
+            }
+            var result = parseLRCLib(data);
+            if (result) resolve({ lines: result.lines, synced: result.synced, url: result.url, hasWords: false });
+            else throw new Error('No lyrics in response');
+          })
+          .catch(function(err) {
+            if (!isProxy) doFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl), true);
+            else reject(err);
+          });
+      }
+      doFetch(targetUrl, false);
+    });
+
+    if (typeof Promise.allSettled === 'function') {
+      Promise.allSettled([lpPromise, lrcPromise]).then(function(results) {
+        var lpRes = results[0].status === 'fulfilled' ? results[0].value : null;
+        var lrcRes = results[1].status === 'fulfilled' ? results[1].value : null;
+        if (!lpRes && !lrcRes) cb(null);
+        else cb({ lyricsplus: lpRes, lrclib: lrcRes });
+      });
+    } else {
+      // Fallback for extremely old browsers without allSettled
+      var completed = 0;
+      var results = { lyricsplus: null, lrclib: null };
+      function checkDone() {
+        if (++completed === 2) {
+          if (!results.lyricsplus && !results.lrclib) cb(null);
+          else cb(results);
+        }
+      }
+      lpPromise.then(function(res) { results.lyricsplus = res; checkDone(); }).catch(function() { checkDone(); });
+      lrcPromise.then(function(res) { results.lrclib = res; checkDone(); }).catch(function() { checkDone(); });
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -430,19 +502,22 @@ VDI.Core = (function() {
         art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src;
       }
 
+      var finalPos = (uiCur !== null) ? uiCur : (el ? el.currentTime : 0);
+
       return {
         title: (ms && ms.metadata && ms.metadata.title) || '',
         artist: (ms && ms.metadata && ms.metadata.artist) || '',
         artwork: art,
         isPlaying: (ms && ms.playbackState === 'playing') || (el ? !el.paused : false),
         duration: (uiDur !== null && uiDur > 0) ? uiDur : (el ? (isFinite(el.duration) ? el.duration : 0) : 0),
-        position: (uiCur !== null && uiDur > 0) ? uiCur : (el ? el.currentTime : 0),
+        position: finalPos,
         hasMedia: !!(el || (ms && ms.metadata && ms.metadata.title)),
         volume: el ? el.volume : 1,
         pipOk: pipOk,
         isFullscreen: !!document.fullscreenElement,
         isYouTubeVideo: location.hostname.includes('youtube.com') && !location.hostname.includes('music.youtube.com'),
-        isMusicApp: location.hostname.includes('music.youtube') || location.hostname.includes('spotify') || location.hostname.includes('soundcloud') || location.hostname.includes('music.apple')
+        isMusicApp: location.hostname.includes('music.youtube') || location.hostname.includes('spotify') || location.hostname.includes('soundcloud') || location.hostname.includes('music.apple'),
+        timestamp: Date.now()
       };
     } catch (e) {
       return null;
@@ -475,7 +550,12 @@ VDI.Core = (function() {
       if (!el && els.length) el = els[0];
 
       if (act === 'toggle') {
-        if (el) {
+        var tb = document.querySelector('#play-pause-button') ||
+                 document.querySelector('.ytp-play-button') ||
+                 document.querySelector('.play-pause-button');
+        if (tb && typeof tb.click === 'function') {
+          tb.click();
+        } else if (el) {
           if (el.paused) el.play();
           else el.pause();
         }
@@ -565,10 +645,13 @@ VDI.Core = (function() {
       var overlay = document.createElement('div');
       overlay.id = 'vdi-pip-overlay';
       overlay.style.position = 'fixed';
-      overlay.style.inset = '0';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
       overlay.style.zIndex = '2147483647'; // Max z-index
       overlay.style.cursor = 'pointer';
-      overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+      overlay.style.background = 'rgba(0, 0, 0, 0.8)';
       overlay.style.display = 'flex';
       overlay.style.alignItems = 'center';
       overlay.style.justifyContent = 'center';
@@ -603,7 +686,7 @@ VDI.Core = (function() {
         }
       };
       
-      document.body.appendChild(overlay);
+      (document.documentElement || document.body).appendChild(overlay);
     }
 
     try {
@@ -616,7 +699,7 @@ VDI.Core = (function() {
         }
       }
       if (!v && vids.length) v = vids[0];
-      if (!v || !document.pictureInPictureEnabled) return false;
+      if (!v) return false;
 
       if (document.pictureInPictureElement) {
         document.exitPictureInPicture().then(function() {

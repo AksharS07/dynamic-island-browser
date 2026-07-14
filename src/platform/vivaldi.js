@@ -10,7 +10,7 @@ VDI.Platform = VDI.Platform || {};
 VDI.Platform.Vivaldi = (function() {
   'use strict';
 
-  function execInTab(tabId, fn, args, cb) {
+  function execInTab(tabId, fn, args, cb, world) {
     if (!tabId) {
       if (cb) cb(null);
       return;
@@ -22,6 +22,7 @@ VDI.Platform.Vivaldi = (function() {
           func: fn
         };
         if (args && args.length) spec.args = args;
+        if (world) spec.world = world;
 
         chrome.scripting.executeScript(spec, function(res) {
           if (chrome.runtime.lastError || !res) {
@@ -85,7 +86,7 @@ VDI.Platform.Vivaldi = (function() {
         
         // If we are already on the media tab, just run it
         if (originalTabId === mediaTabId) {
-          execInTab(mediaTabId, VDI.Core.togglePiP, [], null);
+          execInTab(mediaTabId, VDI.Core.togglePiP, [originalTabId], null);
           return;
         }
         
@@ -113,13 +114,13 @@ VDI.Platform.Vivaldi = (function() {
   }
 
   function getMediaStateFromTab(tabId, callback) {
-    execInTab(tabId, VDI.Core.getTabMediaState, [], callback);
+    execInTab(tabId, VDI.Core.getTabMediaState, [], callback, 'MAIN');
   }
 
   try {
     chrome.runtime.onMessage.addListener(function(msg) {
-      if (msg.type === 'VDI_TELEPORT_BACK' && msg.tabId) {
-        try { chrome.tabs.update(msg.tabId, { active: true }); } catch (e) {}
+      if (msg.type === 'VDI_TELEPORT_BACK' && msg.source) {
+        try { chrome.tabs.update(msg.source, { active: true }); } catch (e) {}
       }
     });
   } catch (e) {}

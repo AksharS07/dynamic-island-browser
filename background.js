@@ -171,171 +171,232 @@ VDI.Core = (function() {
     var cleanTitle = title.replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
     var cleanArtist = (artist || '').replace(/\(.*(?:official|music|lyric|video|audio).*\)/i, '').trim();
     
-    var lpPromise = new Promise(function(resolve, reject) {
-      var lpParams = 'title=' + encodeURIComponent(cleanTitle) + '&artist=' + encodeURIComponent(cleanArtist);
-      if (duration > 0) lpParams += '&duration=' + Math.round(duration);
-      
-      fetch(LYRICS_PLUS_API + '?' + lpParams)
-        .then(function(res) {
-          if (!res.ok) throw new Error('LyricsPlus status: ' + res.status);
-          return res.json();
-        })
-        .then(function(data) {
-          if (!data || data.error || !data.lyrics || data.lyrics.length === 0) {
-            throw new Error('No lyrics found in LyricsPlus');
-          }
-          var lines = [];
-          var synced = (data.type === 'Line' || data.type === 'Word' || data.type === 'Syllable');
-          var hasWords = (data.type === 'Word' || data.type === 'Syllable');
+    // First try LyricsPlus (Kpoe API)
+    var lpParams = 'title=' + encodeURIComponent(cleanTitle) + '&artist=' + encodeURIComponent(cleanArtist);
+    if (duration > 0) lpParams += '&duration=' + Math.round(duration);
+    
+    fetch(LYRICS_PLUS_API + '?' + lpParams)
+      .then(function(res) {
+        if (!res.ok) throw new Error('LyricsPlus status: ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        if (!data || data.error || !data.lyrics || data.lyrics.length === 0) {
+          throw new Error('No lyrics found in LyricsPlus');
+        }
+        var lines = [];
+        var synced = (data.type === 'Line' || data.type === 'Word' || data.type === 'Syllable');
+        var hasWords = (data.type === 'Word' || data.type === 'Syllable');
+        
+        for (var i = 0; i < data.lyrics.length; i++) {
+          var line = data.lyrics[i];
+          if (!line.text) continue;
           
-          for (var i = 0; i < data.lyrics.length; i++) {
-            var line = data.lyrics[i];
-            if (!line.text) continue;
-            var l = {
-              time: line.time / 1000.0,
-              text: line.text,
-              translation: '',
-              words: []
-            };
-            if (hasWords && line.syllabus && line.syllabus.length > 0) {
-              for (var j = 0; j < line.syllabus.length; j++) {
-                var syl = line.syllabus[j];
-                l.words.push({
-                  time: syl.time / 1000.0,
-                  duration: syl.duration / 1000.0,
-                  text: syl.text
+          var l = {
+            time: line.time / 1000.0,
+            text: line.text,
+            translation: '',
+            words: []
+          };
+          
+          if (hasWords && line.syllabus && line.syllabus.length > 0) {
+            for (var j = 0; j < line.syllabus.length; j++) {
+              var syl = line.syllabus[j];
+              l.words.push({
+                time: syl.time / 1000.0,
+                duration: syl.duration / 1000.0,
+                text: syl.text
+              });
+            }
+          }
+          lines.push(l);
+        }
+        
+        if (lines.length > 0 && lines[0].time >= 5) {
+          lines.unshift({ time: 0, text: '♪', translation: '', words: [] });
+        }
+        
+        if (lines.length > 0) {
+          cb({ lines: lines, synced: synced, url: 'https://lyricsplus.binimum.org', hasWords: hasWords });
+        } else {
+          throw new Error('Empty parsed lyrics');
+        }
+      })
+      .catch(function(e) {
+        // Fallback to LRCLib
+        console.log('Falling back to LRCLib:', e.message);
+        fallbackToLRCLib(cleanTitle, cleanArtist, duration, cb);
+      });
+  }
+
+  function fallbackToLRCLib(cleanTitle, cleanArtist, duration, cb) {
+    var q = cleanTitle + ' ' + cleanArtist;
+    var params = 'q=' + encodeURIComponent(q.trim());
+    var targetUrl = LYRICS_API + '?' + params;
+
+    function parseLRCLib(data) {
+      if (!data) return null;
+      var lines = [];
+      var synced = false;
+      if (data.syncedLyrics) {
+        synced = true;
+        var raw = data.syncedLyrics.split('\n');
+        var rawLines = [];
+        for (var i = 0; i < raw.length; i++) {
+          var m = raw[i].match(/\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
+          if (m) {
+            var lineTime = parseInt(m[1]) * 60 + parseFloat(m[2]);
+            var rawText = m[3].trim();
+            var wordsArray = [];
+            
+            // Parse Enhanced LRC: <00:00.00> word <00:00.00>
+            var wordRegex = /<(\d+):(\d+(?:\.\d+)?)>([^<]+)/g;
+            var wMatch;
+            var hasEnhanced = false;
+            var cleanText = rawText;
+            
+            if (rawText.indexOf('<') !== -1 && rawText.indexOf('>') !== -1) {
+              while ((wMatch = wordRegex.exec(rawText)) !== null) {
+                hasEnhanced = true;
+                wordsArray.push({
+                  time: parseInt(wMatch[1]) * 60 + parseFloat(wMatch[2]),
+                  duration: 0.2, // Will be calculated below
+                  text: wMatch[3].trim()
                 });
               }
             }
-            lines.push(l);
+            
+            if (hasEnhanced && wordsArray.length > 0) {
+              // Calculate durations and build clean text
+              cleanText = '';
+              for (var w = 0; w < wordsArray.length; w++) {
+                cleanText += wordsArray[w].text + ' ';
+                if (w < wordsArray.length - 1) {
+                  wordsArray[w].duration = wordsArray[w+1].time - wordsArray[w].time;
+                }
+              }
+              cleanText = cleanText.trim();
+              synced = true;
+            }
+
+            rawLines.push({
+              time: lineTime,
+              text: cleanText,
+              translation: '',
+              words: wordsArray
+            });
           }
-          if (lines.length > 0 && lines[0].time >= 5) {
-            lines.unshift({ time: 0, text: '♪', translation: '', words: [] });
+        }
+        rawLines.sort(function(a, b) { return a.time - b.time; });
+        for (var i = 0; i < rawLines.length; i++) {
+          var text = rawLines[i].text;
+          if (!text) {
+            var nextIdx = -1;
+            for (var j = i + 1; j < rawLines.length; j++) {
+              if (rawLines[j].text) { nextIdx = j; break; }
+            }
+            var gap = nextIdx > -1 ? rawLines[nextIdx].time - rawLines[i].time : 0;
+            if (gap >= 5) {
+              lines.push({ time: rawLines[i].time, text: '♪', translation: '', words: [] });
+            }
+            continue;
+          }
+          lines.push(rawLines[i]);
+        }
+        if (lines.length > 0 && lines[0].time >= 5) {
+          lines.unshift({ time: 0, text: '♪', translation: '', words: [] });
+        }
+      } else if (data.plainLyrics) {
+        synced = false;
+        var plines = data.plainLyrics.split('\n');
+        for (var j = 0; j < plines.length; j++) {
+          lines.push({ time: 0, text: plines[j].trim(), words: [] });
+        }
+      }
+      if (lines.length === 0) return null;
+      var trackUrl = data.id ? 'https://lrclib.net/track/' + data.id : 'https://lrclib.net';
+      return { lines: lines, synced: synced, url: trackUrl };
+    }
+
+    function doFetch(url, isProxy) {
+      fetch(url)
+        .then(function(res) {
+          if (!res.ok) throw new Error('Bad status');
+          return res.json();
+        })
+        .then(function(responseData) {
+          var data = null;
+          if (Array.isArray(responseData)) {
+            for (var i = 0; i < responseData.length; i++) {
+              if (responseData[i].syncedLyrics) {
+                data = responseData[i];
+                break;
+              }
+            }
+            if (!data && responseData.length > 0) data = responseData[0];
+          } else {
+            data = responseData;
+          }
+          
+          var result = parseLRCLib(data);
+          if (result) {
+            cb({ lines: result.lines, synced: result.synced, url: result.url, hasWords: false });
+          } else {
+            throw new Error('No lyrics in response');
+          }
+        })
+        .catch(function(err) {
+          if (!isProxy) {
+            // Fallback to proxy to bypass Vivaldi CORS/Cloudflare UA blocks
+            doFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl), true);
+          } else {
+            fetchSecondaryLyrics(cleanTitle, cleanArtist, cb);
+          }
+        });
+    }
+
+    function fetchSecondaryLyrics(t, a, cb) {
+      var sTitle = t;
+      var sArtist = a;
+      
+      // Attempt to split artist from title if YouTube didn't provide artist metadata
+      if (!sArtist && sTitle.indexOf('-') > -1) {
+        var parts = sTitle.split('-');
+        sArtist = parts[0].trim();
+        sTitle = parts.slice(1).join('-').trim();
+      }
+      
+      if (!sArtist) return cb(null); // OVH requires artist
+
+      var ovhUrl = 'https://api.lyrics.ovh/v1/' + encodeURIComponent(sArtist) + '/' + encodeURIComponent(sTitle);
+      var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(ovhUrl);
+      
+      fetch(proxyUrl)
+        .then(function(res) {
+          if (!res.ok) throw new Error('Secondary API failed');
+          return res.json();
+        })
+        .then(function(data) {
+          if (!data || !data.lyrics) throw new Error('No secondary lyrics');
+          var lines = [];
+          var plines = data.lyrics.split('\n');
+          for (var j = 0; j < plines.length; j++) {
+            var text = plines[j].trim();
+            if (text) lines.push({ time: 0, text: text, translation: '' });
           }
           if (lines.length > 0) {
-            resolve({ lines: lines, synced: synced, url: 'https://lyricsplus.binimum.org', hasWords: hasWords });
+            cb({ lines: lines, synced: false, url: null, hasWords: false });
           } else {
-            throw new Error('Empty parsed lyrics');
+            cb(null);
           }
-        }).catch(reject);
-    });
-
-    var lrcPromise = new Promise(function(resolve, reject) {
-      var q = cleanTitle + ' ' + cleanArtist;
-      var targetUrl = LYRICS_API + '?q=' + encodeURIComponent(q.trim());
-
-      function parseLRCLib(data) {
-        if (!data) return null;
-        var lines = [];
-        var synced = false;
-        if (data.syncedLyrics) {
-          synced = true;
-          var raw = data.syncedLyrics.split('\n');
-          var rawLines = [];
-          for (var i = 0; i < raw.length; i++) {
-            var m = raw[i].match(/\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
-            if (m) {
-              var lineTime = parseInt(m[1]) * 60 + parseFloat(m[2]);
-              var rawText = m[3].trim();
-              var wordsArray = [];
-              var wordRegex = /<(\d+):(\d+(?:\.\d+)?)>([^<]+)/g;
-              var wMatch, hasEnhanced = false, cleanText = rawText;
-              
-              if (rawText.indexOf('<') !== -1 && rawText.indexOf('>') !== -1) {
-                while ((wMatch = wordRegex.exec(rawText)) !== null) {
-                  hasEnhanced = true;
-                  wordsArray.push({
-                    time: parseInt(wMatch[1]) * 60 + parseFloat(wMatch[2]),
-                    duration: 0.2,
-                    text: wMatch[3].trim()
-                  });
-                }
-              }
-              if (hasEnhanced && wordsArray.length > 0) {
-                cleanText = '';
-                for (var w = 0; w < wordsArray.length; w++) {
-                  cleanText += wordsArray[w].text + ' ';
-                  if (w < wordsArray.length - 1) wordsArray[w].duration = wordsArray[w+1].time - wordsArray[w].time;
-                }
-                cleanText = cleanText.trim();
-                synced = true;
-              }
-              rawLines.push({ time: lineTime, text: cleanText, translation: '', words: wordsArray });
-            }
-          }
-          rawLines.sort(function(a, b) { return a.time - b.time; });
-          for (var i = 0; i < rawLines.length; i++) {
-            var text = rawLines[i].text;
-            if (!text) {
-              var nextIdx = -1;
-              for (var j = i + 1; j < rawLines.length; j++) {
-                if (rawLines[j].text) { nextIdx = j; break; }
-              }
-              var gap = nextIdx > -1 ? rawLines[nextIdx].time - rawLines[i].time : 0;
-              if (gap >= 5) lines.push({ time: rawLines[i].time, text: '♪', translation: '', words: [] });
-              continue;
-            }
-            lines.push(rawLines[i]);
-          }
-          if (lines.length > 0 && lines[0].time >= 5) lines.unshift({ time: 0, text: '♪', translation: '', words: [] });
-        } else if (data.plainLyrics) {
-          synced = false;
-          var plines = data.plainLyrics.split('\n');
-          for (var j = 0; j < plines.length; j++) lines.push({ time: 0, text: plines[j].trim(), words: [] });
-        }
-        if (lines.length === 0) return null;
-        var trackUrl = data.id ? 'https://lrclib.net/track/' + data.id : 'https://lrclib.net';
-        return { lines: lines, synced: synced, url: trackUrl };
-      }
-
-      function doFetch(url, isProxy) {
-        fetch(url)
-          .then(function(res) {
-            if (!res.ok) throw new Error('Bad status');
-            return res.json();
-          })
-          .then(function(responseData) {
-            var data = null;
-            if (Array.isArray(responseData)) {
-              for (var i = 0; i < responseData.length; i++) {
-                if (responseData[i].syncedLyrics) { data = responseData[i]; break; }
-              }
-              if (!data && responseData.length > 0) data = responseData[0];
-            } else {
-              data = responseData;
-            }
-            var result = parseLRCLib(data);
-            if (result) resolve({ lines: result.lines, synced: result.synced, url: result.url, hasWords: false });
-            else throw new Error('No lyrics in response');
-          })
-          .catch(function(err) {
-            if (!isProxy) doFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl), true);
-            else reject(err);
-          });
-      }
-      doFetch(targetUrl, false);
-    });
-
-    if (typeof Promise.allSettled === 'function') {
-      Promise.allSettled([lpPromise, lrcPromise]).then(function(results) {
-        var lpRes = results[0].status === 'fulfilled' ? results[0].value : null;
-        var lrcRes = results[1].status === 'fulfilled' ? results[1].value : null;
-        if (!lpRes && !lrcRes) cb(null);
-        else cb({ lyricsplus: lpRes, lrclib: lrcRes });
-      });
-    } else {
-      // Fallback for extremely old browsers without allSettled
-      var completed = 0;
-      var results = { lyricsplus: null, lrclib: null };
-      function checkDone() {
-        if (++completed === 2) {
-          if (!results.lyricsplus && !results.lrclib) cb(null);
-          else cb(results);
-        }
-      }
-      lpPromise.then(function(res) { results.lyricsplus = res; checkDone(); }).catch(function() { checkDone(); });
-      lrcPromise.then(function(res) { results.lrclib = res; checkDone(); }).catch(function() { checkDone(); });
+        })
+        .catch(function(err) {
+          console.error('[VDI] Secondary lyrics fallback failed:', err.message);
+          cb(null);
+        });
     }
+
+    doFetch(targetUrl, false);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -634,7 +695,7 @@ VDI.Core = (function() {
       if (sourceInfo) {
         try {
           if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-            chrome.runtime.sendMessage({ type: 'VDI_TELEPORT_BACK', source: sourceInfo });
+            chrome.runtime.sendMessage({ type: 'VDI_TELEPORT_BACK', tabId: sourceInfo });
           }
         } catch (e) {}
       }
@@ -727,6 +788,19 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Message Listener (for content script)
+  // ─────────────────────────────────────────────────────────────
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
+        if (msg && msg.type === 'VDI_TRIGGER_PIP') {
+          togglePiP(msg.source);
+        }
+      });
+    }
+  } catch (e) {}
+
+  // ─────────────────────────────────────────────────────────────
   // Public API
   // ─────────────────────────────────────────────────────────────
   return {
@@ -808,19 +882,17 @@ VDI.Platform.ChromeExt = (function() {
 
     var pollInterval = 1000;
 
-    function execInTab(tabId, fn, args, cb, world) {
+    function execInTab(tabId, fn, args, cb) {
       if (!tabId) {
         if (cb) cb(null);
         return;
       }
-      var opts = {
+      chrome.scripting.executeScript({
         target: { tabId: tabId, allFrames: false },
         func: fn,
-        args: args || []
-      };
-      if (world) opts.world = world;
-
-      chrome.scripting.executeScript(opts, function(res) {
+        args: args || [],
+        world: 'MAIN'
+      }, function(res) {
         if (chrome.runtime.lastError || !res) {
           console.warn('[VDI] execInTab failed:', chrome.runtime.lastError);
           if (cb) cb(null);
@@ -864,7 +936,7 @@ VDI.Platform.ChromeExt = (function() {
               S.isMusicApp = res.isMusicApp || false;
               if (!res.hasMedia) S.hasMedia = false;
               broadcastState();
-            }, 'MAIN');
+            });
           } else if (S.hasMedia) {
             S.hasMedia = false;
             broadcastState();
@@ -894,7 +966,7 @@ VDI.Platform.ChromeExt = (function() {
           S.isMusicApp = res.isMusicApp || false;
 
           broadcastState();
-        }, 'MAIN');
+        });
       });
     }
 
@@ -907,36 +979,23 @@ VDI.Platform.ChromeExt = (function() {
     function handleMessage(msg, sender, sendResponse) {
       if (msg.type === 'VDI_ACTION') {
         if (msg.act === 'pip') {
-          function triggerPiP(srcTabId, srcWinId) {
-            if (S.tabId !== null && srcTabId !== S.tabId) {
-              chrome.tabs.update(S.tabId, { active: true }, function() {
-                if (S.windowId !== null) {
-                  chrome.windows.update(S.windowId, { focused: true }, function() {
-                    execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: srcTabId, winId: srcWinId}], null);
-                  });
-                } else {
-                  execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: srcTabId, winId: srcWinId}], null);
-                }
-              });
-            } else {
-              execInTab(S.tabId, VDI.Core.togglePiP, [null], null);
-            }
-          }
-
-          if (sender && sender.tab) {
-            triggerPiP(sender.tab.id, sender.tab.windowId);
-          } else {
-            try {
-              chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-                var tid = (tabs && tabs.length) ? tabs[0].id : null;
-                var wid = (tabs && tabs.length) ? tabs[0].windowId : null;
-                triggerPiP(tid, wid);
-              });
-            } catch (e) {
-              triggerPiP(null, null);
-            }
-          }
+          var sourceTabId = (sender && sender.tab) ? sender.tab.id : null;
+          var sourceWinId = (sender && sender.tab) ? sender.tab.windowId : null;
           
+          if (S.tabId !== null && sourceTabId !== S.tabId) {
+            // Teleport to the media tab so the user can interact with the overlay
+            chrome.tabs.update(S.tabId, { active: true }, function() {
+              if (S.windowId !== null) {
+                chrome.windows.update(S.windowId, { focused: true }, function() {
+                  execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: sourceTabId, winId: sourceWinId}], null);
+                });
+              } else {
+                execInTab(S.tabId, VDI.Core.togglePiP, [{tabId: sourceTabId, winId: sourceWinId}], null);
+              }
+            });
+          } else {
+            execInTab(S.tabId, VDI.Core.togglePiP, [null], null);
+          }
         } else if (msg.act === 'jump') {
           if (S.tabId !== null) {
             chrome.tabs.update(S.tabId, { active: true });
