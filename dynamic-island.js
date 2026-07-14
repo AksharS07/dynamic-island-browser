@@ -1329,10 +1329,10 @@ VDI.UI = (function() {
       '<div class="vdi-stg-row"><span class="vdi-stg-label">Free Placement</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-freeplace"><span class="vdi-slider"></span></label></div>' +
       '<div class="vdi-stg-header" style="margin-top:8px;">Presets</div>' +
       '<div class="vdi-stg-row" style="justify-content:space-between; margin-top:4px;">' +
-        '<button class="vdi-preset-btn" id="vdi-stg-pos-t">Top</button>' +
-        '<button class="vdi-preset-btn" id="vdi-stg-pos-b">Bottom</button>' +
-        '<button class="vdi-preset-btn" id="vdi-stg-pos-l">Left</button>' +
-        '<button class="vdi-preset-btn" id="vdi-stg-pos-r">Right</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-t" title="Snap to Top Center">Top</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-b" title="Snap to Bottom Center">Bottom</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-l" title="Snap to Left Edge">Left</button>' +
+        '<button class="vdi-preset-btn" id="vdi-stg-pos-r" title="Snap to Right Edge">Right</button>' +
       '</div>' +
       '</div>';
     return panel;
