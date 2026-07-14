@@ -1,5 +1,7 @@
 # Dynamic Island for Browsers (V1.3) (Tested ONLY for YouTube and YouTube Music)
 
+**🎉 Now officially available on the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.2, V1.3 pending review)*
+
 <p align="center">
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
 </p>
