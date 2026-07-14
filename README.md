@@ -62,15 +62,7 @@ There are two versions:
 
 ## Steps to Download & Install
 
-### For Vivaldi only:
-1. Close Vivaldi completely.
-2. Clone or download the **source code / repository**.
-3. Right-click `UPDATE (Run as Admin).bat` and select **Run as Administrator**.
-4. The script will automatically find your Vivaldi installation, inject the Dynamic Island (`dynamic-island.js`), and relaunch the browser for you.
-
-*(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
-
-### Installing the Chrome / Edge Extension:
+### Installing the Chrome / Edge Extension (Recommended):
 1. Download the latest **`dynamic-island-extension-v1.3.zip`** release file.
 2. Extract the folder to a safe location on your computer.
 3. Open `chrome://extensions` (or `edge://extensions`).
@@ -78,6 +70,15 @@ There are two versions:
 5. Click **Load unpacked** and select the folder you extracted.
 
 No build step, no dependencies, no account required.
+
+### For Vivaldi Native Mod (Advanced):
+1. Close Vivaldi completely.
+2. Clone or download the **source code / repository**.
+3. Open the `vivaldi-scripts` folder.
+4. Right-click `UPDATE (Run as Admin).bat` and select **Run as Administrator**.
+5. The script will automatically find your Vivaldi installation, inject the Dynamic Island (`dynamic-island.js`), and relaunch the browser for you.
+
+*(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
 
 ---
 
