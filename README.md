@@ -17,13 +17,13 @@ There are two versions:
 ## In Action 🎬
 
 ### Vivaldi — Native title bar mod
-![Vivaldi Demo](vivaldi-demo.mp4)
+<video src="vivaldi-demo.mp4" autoplay loop muted controls></video>
 
 ### Chrome / Edge — Unpacked extension
-![Edge Demo](edge-demo.mp4)
+<video src="edge-demo.mp4" autoplay loop muted controls></video>
 
 ### Spotify Web Integration
-![Spotify Demo](spotify_demo.mp4)
+<video src="spotify_demo.mp4" autoplay loop muted controls></video>
 
 ## Screenshots 📸
 
