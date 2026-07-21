@@ -74,11 +74,12 @@ VDI.UI = (function() {
     panel.id = 'vdi-settings-panel';
     panel.innerHTML =
       '<div class="vdi-stg-header">General</div>' +
-      '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YouTube</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideyt"><span class="vdi-slider"></span></label></div>' +
-      '<div class="vdi-stg-row"><span class="vdi-stg-label">Hide on YT Music</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideytm"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><div style="display:flex;flex-direction:column;"><span class="vdi-stg-label">Hide on YouTube</span><span class="vdi-stg-sub">Hides the island completely while on YouTube</span></div><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideyt"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><div style="display:flex;flex-direction:column;"><span class="vdi-stg-label">Hide on YT Music</span><span class="vdi-stg-sub">Hides the island completely while on YT Music</span></div><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hideytm"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><div style="display:flex;flex-direction:column;"><span class="vdi-stg-label">Hide on Spotify</span><span class="vdi-stg-sub">Hides the island completely while on Spotify</span></div><label class="vdi-switch"><input type="checkbox" id="vdi-stg-hidespotify"><span class="vdi-slider"></span></label></div>' +
       '<div class="vdi-stg-header" style="margin-top:8px;">Features</div>' +
-      '<div class="vdi-stg-row"><span class="vdi-stg-label">Enable Lyrics Engine</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-enlyrics"><span class="vdi-slider"></span></label></div>' +
-      '<div class="vdi-stg-row"><span class="vdi-stg-label">Free Placement</span><label class="vdi-switch"><input type="checkbox" id="vdi-stg-freeplace"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><div style="display:flex;flex-direction:column;"><span class="vdi-stg-label">Enable Lyrics Engine</span><span class="vdi-stg-sub">Fetch and display time-synced lyrics</span></div><label class="vdi-switch"><input type="checkbox" id="vdi-stg-enlyrics"><span class="vdi-slider"></span></label></div>' +
+      '<div class="vdi-stg-row"><div style="display:flex;flex-direction:column;"><span class="vdi-stg-label">Free Placement</span><span class="vdi-stg-sub">Allow dragging anywhere on the screen</span></div><label class="vdi-switch"><input type="checkbox" id="vdi-stg-freeplace"><span class="vdi-slider"></span></label></div>' +
       '<div class="vdi-stg-header" style="margin-top:8px;">Presets</div>' +
       '<div class="vdi-stg-row" style="justify-content:space-between; margin-top:4px;">' +
         '<button class="vdi-preset-btn" id="vdi-stg-pos-t" title="Snap to Top Center">Top</button>' +
@@ -153,7 +154,8 @@ VDI.UI = (function() {
       if (state.seekTimeout) clearTimeout(state.seekTimeout);
       state.seekTimeout = setTimeout(function() {
         state.isSeeking = false;
-      }, 1500);
+        state.forceNextSync = true;
+      }, 2000);
       
       state.position = targetPos;
       state.basePosition = targetPos;
@@ -170,7 +172,7 @@ VDI.UI = (function() {
     var idleDelay = opts.idleDelay || 9000;
     var collapseDelay = opts.collapseDelay || 500;
     var isDragging = false;
-    var settings = { hideYouTube: false, hideYouTubeMusic: false, enableLyrics: true, freePlacement: true, seenTooltip: false };
+    var settings = { hideYouTube: false, hideYouTubeMusic: false, hideSpotify: false, enableLyrics: true, freePlacement: true, seenTooltip: false };
 
     // Helper
     function $(id) { return document.getElementById(id); }
@@ -233,9 +235,11 @@ VDI.UI = (function() {
       
       var onYTM = opts.isVivaldi ? state.isMusicApp : window.location.hostname.includes('music.youtube.com');
       var onYT = opts.isVivaldi ? state.isYouTubeVideo : (window.location.hostname.includes('youtube.com') && !window.location.hostname.includes('music.youtube.com'));
+      var onSpotify = window.location.hostname.includes('spotify.com');
       
       var isHiddenByApp = (state.isMusicApp && settings.hideYouTubeMusic && onYTM) || 
-                          (state.isYouTubeVideo && settings.hideYouTube && onYT);
+                          (state.isYouTubeVideo && settings.hideYouTube && onYT) ||
+                          (settings.hideSpotify && onSpotify);
       
       var hideIsland = !state.hasMedia || state.isFullscreen || isBrowserFs || document.fullscreenElement || manuallyClosed || isHiddenByApp;
 
@@ -364,9 +368,10 @@ VDI.UI = (function() {
 
     function updateTooltipPosition() {
       var stgTooltip = $('vdi-stg-tooltip');
-      if (!stgTooltip || !stgTooltip.classList.contains('show')) return;
+      if (!stgTooltip) return;
       var r = island.getBoundingClientRect();
-      stgTooltip.style.top = (r.top + r.height + 12) + 'px';
+      // Gear icon is at top:10px, height:24px. So bottom of gear is r.top + 34.
+      stgTooltip.style.top = (r.top + 42) + 'px';
       stgTooltip.style.left = (r.left + 4) + 'px';
     }
 
@@ -743,6 +748,8 @@ VDI.UI = (function() {
       clearTimeout(colTimer);
       colTimer = setTimeout(function() {
         island.classList.remove('vdi-expanded');
+        var sp = $('vdi-settings-panel');
+        if (sp) sp.classList.remove('show');
         if ($('vdi-stg-tooltip')) {
           $('vdi-stg-tooltip').classList.remove('show');
           setTimeout(function() {
@@ -855,14 +862,14 @@ VDI.UI = (function() {
         
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
           chrome.storage.local.set({
-            'vdi_pos_x': island.style.left,
-            'vdi_pos_y': island.style.top,
+            'vdi_loc_x': island.style.left,
+            'vdi_loc_y': island.style.top,
             'vdi_transform': island.style.transform,
             'activePreset': null
           });
         } else {
-          localStorage.setItem('vdi_pos_x', island.style.left);
-          localStorage.setItem('vdi_pos_y', island.style.top);
+          localStorage.setItem('vdi_loc_x', island.style.left);
+          localStorage.setItem('vdi_loc_y', island.style.top);
           localStorage.setItem('vdi_transform', island.style.transform);
         }
       });
@@ -888,7 +895,7 @@ VDI.UI = (function() {
           isDragging = false;
           if ($('vdi-snap-zones')) $('vdi-snap-zones').classList.remove('active');
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-            chrome.storage.local.set({ 'vdi_pos_x': island.style.left, 'vdi_pos_y': island.style.top, 'vdi_transform': island.style.transform, 'activePreset': null });
+            chrome.storage.local.set({ 'vdi_loc_x': island.style.left, 'vdi_loc_y': island.style.top, 'vdi_transform': island.style.transform, 'activePreset': null });
           }
         }
       });
@@ -938,27 +945,19 @@ VDI.UI = (function() {
           // Sync UI state
           $('vdi-stg-hideyt').checked = settings.hideYouTube;
           $('vdi-stg-hideytm').checked = settings.hideYouTubeMusic;
+          $('vdi-stg-hidespotify').checked = settings.hideSpotify;
           $('vdi-stg-enlyrics').checked = settings.enableLyrics;
           $('vdi-stg-freeplace').checked = settings.freePlacement;
         });
 
-        var hideStgTimeout;
         stgPanel.addEventListener('mouseleave', function() {
-          hideStgTimeout = setTimeout(function() {
-            stgPanel.classList.remove('show');
-          }, 400);
+          handleMouseLeave();
         });
         stgPanel.addEventListener('mouseenter', function() {
-          clearTimeout(hideStgTimeout);
           handleMouseEnter();
         });
-        island.addEventListener('mouseleave', function() {
-          hideStgTimeout = setTimeout(function() {
-            stgPanel.classList.remove('show');
-          }, 400);
-        });
         island.addEventListener('mouseenter', function() {
-          clearTimeout(hideStgTimeout);
+          // Island enter logic handled centrally, this is just a stub if needed
         });
 
         document.addEventListener('click', function(e) {
@@ -966,6 +965,15 @@ VDI.UI = (function() {
             stgPanel.classList.remove('show');
           }
         });
+        
+        if ($('vdi-stg-tooltip')) {
+          $('vdi-stg-tooltip').addEventListener('mouseleave', function() {
+            handleMouseLeave();
+          });
+          $('vdi-stg-tooltip').addEventListener('mouseenter', function() {
+            handleMouseEnter();
+          });
+        }
 
         if ($('vdi-stg-tooltip-btn')) {
           $('vdi-stg-tooltip-btn').addEventListener('click', function(e) {
@@ -977,9 +985,9 @@ VDI.UI = (function() {
             }, 300);
             
             if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-              chrome.storage.local.set({ 'vdi_cfg_seenTooltip': true });
+              chrome.storage.local.set({ 'vdi_cfg_seenTooltip3': true });
             } else {
-              localStorage.setItem('vdi_cfg_seenTooltip', 'true');
+              localStorage.setItem('vdi_cfg_seenTooltip3', 'true');
             }
           });
         }
@@ -1003,6 +1011,7 @@ VDI.UI = (function() {
 
         bindStg('vdi-stg-hideyt', 'hideYouTube');
         bindStg('vdi-stg-hideytm', 'hideYouTubeMusic');
+        bindStg('vdi-stg-hidespotify', 'hideSpotify');
         bindStg('vdi-stg-enlyrics', 'enableLyrics');
         bindStg('vdi-stg-freeplace', 'freePlacement');
 
@@ -1192,17 +1201,17 @@ VDI.UI = (function() {
       // Use exact clock interpolation instead of dt accumulation
       if (!state.isSeeking) {
         var now = Date.now();
-        var latency = newState.timestamp ? (now - newState.timestamp) / 1000.0 : 0;
-        var newBase = newState.position + latency;
+        var newBase = newState.position;
         var elapsed = (now - state.lastSyncTime) / 1000.0;
         var currentPredicted = (state.basePosition || 0) + elapsed;
         
-        // Only violently snap the clock if we drifted by more than 0.3s.
+        // Only violently snap the clock if we drifted by more than 1.5s (or if forced).
         // Otherwise, trust our local 60FPS coasting timer to prevent micro-stutters!
-        if (!state.lastSyncTime || Math.abs(currentPredicted - newBase) > 0.3) {
+        if (!state.lastSyncTime || state.forceNextSync || Math.abs(currentPredicted - newBase) > 1.5) {
           state.basePosition = newBase;
           state.lastSyncTime = now;
           state.position = state.basePosition;
+          state.forceNextSync = false;
         }
       }
 
@@ -1284,16 +1293,18 @@ VDI.UI = (function() {
         updateSettingsPanelPosition();
       });
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['vdi_loc_x', 'vdi_loc_y', 'vdi_transform', 'vdi_cfg_hideYouTube', 'vdi_cfg_hideYouTubeMusic', 'vdi_cfg_enableLyrics', 'vdi_cfg_freePlacement', 'vdi_cfg_seenTooltip'], function(res) {
+        chrome.storage.local.get(['vdi_loc_x', 'vdi_loc_y', 'vdi_transform', 'vdi_cfg_hideYouTube', 'vdi_cfg_hideYouTubeMusic', 'vdi_cfg_hideSpotify', 'vdi_cfg_enableLyrics', 'vdi_cfg_freePlacement', 'vdi_cfg_seenTooltip3'], function(res) {
           applyPos(res.vdi_loc_x, res.vdi_loc_y, res.vdi_transform);
           if (res.vdi_cfg_hideYouTube !== undefined) settings.hideYouTube = res.vdi_cfg_hideYouTube;
           if (res.vdi_cfg_hideYouTubeMusic !== undefined) settings.hideYouTubeMusic = res.vdi_cfg_hideYouTubeMusic;
+          if (res.vdi_cfg_hideSpotify !== undefined) settings.hideSpotify = res.vdi_cfg_hideSpotify;
           if (res.vdi_cfg_enableLyrics !== undefined) settings.enableLyrics = res.vdi_cfg_enableLyrics;
           if (res.vdi_cfg_freePlacement !== undefined) settings.freePlacement = res.vdi_cfg_freePlacement;
-          if (res.vdi_cfg_seenTooltip !== undefined) settings.seenTooltip = res.vdi_cfg_seenTooltip;
+          if (res.vdi_cfg_seenTooltip3 !== undefined) settings.seenTooltip = res.vdi_cfg_seenTooltip3;
 
           $('vdi-stg-hideyt').checked = settings.hideYouTube;
           $('vdi-stg-hideytm').checked = settings.hideYouTubeMusic;
+          $('vdi-stg-hidespotify').checked = settings.hideSpotify;
           $('vdi-stg-enlyrics').checked = settings.enableLyrics;
           $('vdi-stg-freeplace').checked = settings.freePlacement;
         });
@@ -1302,6 +1313,7 @@ VDI.UI = (function() {
           if (namespace === 'local') {
             if (changes.vdi_cfg_hideYouTube) settings.hideYouTube = changes.vdi_cfg_hideYouTube.newValue;
             if (changes.vdi_cfg_hideYouTubeMusic) settings.hideYouTubeMusic = changes.vdi_cfg_hideYouTubeMusic.newValue;
+            if (changes.vdi_cfg_hideSpotify) settings.hideSpotify = changes.vdi_cfg_hideSpotify.newValue;
             if (changes.vdi_cfg_enableLyrics) settings.enableLyrics = changes.vdi_cfg_enableLyrics.newValue;
             if (changes.vdi_cfg_freePlacement) settings.freePlacement = changes.vdi_cfg_freePlacement.newValue;
             updateUI();
@@ -1315,9 +1327,10 @@ VDI.UI = (function() {
         };
         settings.hideYouTube = getBool('hideYouTube', settings.hideYouTube);
         settings.hideYouTubeMusic = getBool('hideYouTubeMusic', settings.hideYouTubeMusic);
+        settings.hideSpotify = getBool('hideSpotify', settings.hideSpotify);
         settings.enableLyrics = getBool('enableLyrics', settings.enableLyrics);
         settings.freePlacement = getBool('freePlacement', settings.freePlacement);
-        settings.seenTooltip = getBool('seenTooltip', settings.seenTooltip);
+        settings.seenTooltip = getBool('seenTooltip3', settings.seenTooltip);
       }
       
       bindEvents();

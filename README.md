@@ -1,5 +1,5 @@
-# Dynamic Island for Browsers (V1.3) 
-(Tested ONLY for YouTube and YouTube Music)
+# Dynamic Island for Browsers (V1.4) 
+*(Now supporting Spotify Web, YouTube, and YouTube Music)*
 
 **🎉 Now officially available on the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.2, V1.3 pending review)*
 
@@ -7,7 +7,7 @@
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
 </p>
 
-A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background (Currently supports YouTube & YouTube Music).
+A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background. (Currently supports **Spotify Web**, **YouTube**, & **YouTube Music**).
 
 There are two versions:
 
@@ -17,10 +17,13 @@ There are two versions:
 ## In Action 🎬
 
 ### Vivaldi — Native title bar mod
-![Vivaldi Demo](vivaldi-demo.gif)
+![Vivaldi Demo](vivaldi-demo.mp4)
 
 ### Chrome / Edge — Unpacked extension
-![Edge Demo](edge-demo.gif)
+![Edge Demo](edge-demo.mp4)
+
+### Spotify Web Integration
+![Spotify Demo](spotify_demo.mp4)
 
 ## Screenshots 📸
 
@@ -30,6 +33,16 @@ There are two versions:
 </p>
 
 ---
+
+## What's New in V1.4 🚀
+
+- **Spotify Web Integration**: The island now fully supports `open.spotify.com`! It automatically extracts the current track, artist, album art, duration, and live time. You can also play, pause, and seek flawlessly using our custom robotic-mouse DOM manipulation.
+- **Deep-Media Timer Sync**: Solved severe timer desynchronization bugs caused by Spotify's DRM MSE chunking buffers and 8-second Canvas background videos. The Island now penetrates the DOM to extract true millisecond precision directly from the active audio tags while mathematically filtering out hidden looping visual elements.
+- **Micro-Stutter Latency Fix**: Eradicated an issue where the background script's polling latency caused the Island's 60FPS UI progress bar to violently jitter back and forth. The Island now natively compensates for cross-process communication delays.
+- **Absolute Logic Isolation**: We rebuilt the core engine to strictly partition media platforms. This mathematically guarantees that the new Spotify integration will *never* interfere with or break our highly-tuned YouTube and YouTube Music logic!
+- **Gapless Playback Fix**: Fixed a major bug where YouTube Music's hidden gapless playback buffer caused the island's time tracking to desync and violently jitter. The 60FPS sync engine now smoothly bridges these buffer gaps.
+- **Drag & Drop Persistence**: Fixed an issue where free-dragged positions wouldn't save correctly. If you drag the island to a custom spot on your screen, it will now correctly remember that exact position.
+- **File Minification**: The extension is now heavily minified, drastically shrinking the core file size for snappier loading times and a lighter memory footprint!
 
 ## What's New in V1.3 🚀
 
@@ -64,7 +77,7 @@ There are two versions:
 ## Steps to Download & Install
 
 ### Installing the Chrome / Edge Extension (Recommended):
-1. Download the latest **`dynamic-island-extension-v1.3.zip`** release file.
+1. Download the latest **`dynamic-island-extension-v1.4.zip`** release file.
 2. Extract the folder to a safe location on your computer.
 3. Open `chrome://extensions` (or `edge://extensions`).
 4. Enable **Developer Mode** using the toggle in the top right.
@@ -97,7 +110,7 @@ This is what AI-assisted development actually looks like in practice. It is a lo
 
 ## Known Limitations & Technical Challenges
 
-- **Platform Support:** Currently heavily optimized and actively tested *only* for YouTube and YouTube Music. Support for other platforms like Spotify and Apple Music is a work in progress.
+- **Platform Support:** Currently optimized and actively tested for **YouTube, YouTube Music, and Spotify Web Player**. Native desktop apps (like the standalone Spotify PC client) cannot be supported due to strict browser extension sandbox rules. Support for Apple Music Web is a work in progress.
 - **Fake Visualizer:** The EQ visualizer animates randomly rather than reacting to actual audio. There is no browser API that securely exposes raw audio waveform data from an arbitrary tab to an external script. 
 - **Lyrics Availability:** Depends entirely on lrclib.net's database. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. While translations are not provided, accurate romanization is fetched on-the-fly.
 - **Chromium Throttling:** When the media tab isn't focused, Chromium aggressively throttles its JavaScript, which can cause minor desyncs or lag when skipping tracks.

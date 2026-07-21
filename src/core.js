@@ -422,9 +422,95 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Spotify Media State Extractor (Isolated)
+  // ─────────────────────────────────────────────────────────────
+  function getSpotifyMediaState() {
+    var parseTime = function(str) {
+      if (!str) return 0;
+      var p = str.trim().split(':').map(Number);
+      return p.length === 2 ? p[0] * 60 + p[1] : (p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : 0);
+    };
+
+    var durEls = document.querySelectorAll('[data-testid="playback-duration"]');
+    var posEls = document.querySelectorAll('[data-testid="playback-position"]');
+    var playBtn = document.querySelector('[data-testid="control-button-playpause"]');
+    
+    var uiDur = 0;
+    for (var i = 0; i < durEls.length; i++) {
+      if (durEls[i].getBoundingClientRect().width > 0) {
+        var dt = parseTime(durEls[i].textContent);
+        if (dt > uiDur) uiDur = dt;
+      }
+    }
+    
+    var uiCur = 0;
+    for (var j = 0; j < posEls.length; j++) {
+      if (posEls[j].getBoundingClientRect().width > 0) {
+        var ct = parseTime(posEls[j].textContent);
+        if (ct > uiCur) uiCur = ct;
+      }
+    }
+    
+    var isPlaying = playBtn ? playBtn.getAttribute('aria-label') === 'Pause' : false;
+
+    // Spotify's UI string is often 1-3 seconds delayed due to DRM/MSE chunking buffers.
+    // To sync lyrics perfectly, we MUST extract millisecond precision from the true audio element.
+    var realCur = null;
+    var els = Array.prototype.slice.call(document.querySelectorAll('video, audio'));
+    var realEl = null;
+
+    if (uiDur > 0) {
+      for (var k = 0; k < els.length; k++) {
+        var d = els[k].duration;
+        if (d > 0 && Math.abs(d - uiDur) <= 5) { realEl = els[k]; break; }
+      }
+    }
+    if (!realEl) {
+      for (var m = 0; m < els.length; m++) {
+        var d2 = els[m].duration;
+        // Ignore < 30s elements to completely avoid 8-second looping Canvas videos!
+        if (!els[m].paused && (isNaN(d2) || d2 === Infinity || d2 > 30)) { realEl = els[m]; break; }
+      }
+    }
+    if (realEl && realEl.currentTime >= 0) {
+      realCur = realEl.currentTime;
+    }
+    if (realCur !== null) {
+      uiCur = realCur;
+    }
+
+    var ms = navigator.mediaSession;
+    var art = null;
+    if (ms && ms.metadata && ms.metadata.artwork && ms.metadata.artwork.length) {
+      art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src;
+    }
+
+    return {
+      title: (ms && ms.metadata && ms.metadata.title) || document.title.replace(' - Spotify', '').trim() || '',
+      artist: (ms && ms.metadata && ms.metadata.artist) || '',
+      artwork: art,
+      isPlaying: isPlaying,
+      duration: uiDur,
+      position: uiCur,
+      hasMedia: !!((ms && ms.metadata && ms.metadata.title) || uiDur > 0),
+      volume: 1, 
+      pipOk: false,
+      isFullscreen: !!document.fullscreenElement,
+      isYouTubeVideo: false,
+      isMusicApp: true,
+      timestamp: Date.now()
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Tab media state extraction (injected into content pages)
   // ─────────────────────────────────────────────────────────────
   function getTabMediaState() {
+    // 100% ISOLATION: Intercept Spotify immediately
+    if (window.location.hostname.includes('spotify.com')) {
+      return getSpotifyMediaState();
+    }
+
     var vids = document.querySelectorAll('video');
     var auds = document.querySelectorAll('audio');
     var isYTMusic = window.location.hostname === 'music.youtube.com';
@@ -447,15 +533,6 @@ VDI.Core = (function() {
             uiCur = parseTime(parts[0]);
             uiDur = parseTime(parts[1]);
           }
-        }
-
-        // The UI text is rounded to integers. Use the hidden player API for millisecond precision!
-        var player = document.getElementById('movie_player');
-        if (player && typeof player.getCurrentTime === 'function') {
-          try {
-            var pTime = player.getCurrentTime();
-            if (pTime >= 0) uiCur = pTime;
-          } catch (e) {}
         }
       } else if (window.location.hostname.indexOf('youtube.com') > -1) {
         var td = document.querySelector('.ytp-time-duration');
@@ -528,6 +605,54 @@ VDI.Core = (function() {
   // Media actions (injected into content pages)
   // ─────────────────────────────────────────────────────────────
   function executeMediaAction(act, val) {
+    // 100% ISOLATION: Intercept Spotify immediately
+    if (window.location.hostname.includes('spotify.com')) {
+      if (act === 'toggle') {
+        var tb = document.querySelector('[data-testid="control-button-playpause"]');
+        if (tb) tb.click();
+      } else if (act === 'prev') {
+        var pb = document.querySelector('[data-testid="control-button-skip-back"]');
+        if (pb) pb.click();
+      } else if (act === 'next') {
+        var nb = document.querySelector('[data-testid="control-button-skip-forward"]');
+        if (nb) nb.click();
+      } else if (act === 'seek' && typeof val === 'number') {
+        var durEls = document.querySelectorAll('[data-testid="playback-duration"]');
+        var dur = 0;
+        for (var i = 0; i < durEls.length; i++) {
+          if (durEls[i].getBoundingClientRect().width > 0) {
+            var p = durEls[i].textContent.trim().split(':').map(Number);
+            var dt = p.length === 2 ? p[0] * 60 + p[1] : (p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : 0);
+            if (dt > dur) dur = dt;
+          }
+        }
+        if (dur > 0) {
+          var bars = document.querySelectorAll('[data-testid="progress-bar"], [data-testid="playback-progressbar"], .playback-bar');
+          var bar = null;
+          for (var j = 0; j < bars.length; j++) {
+            if (bars[j].getBoundingClientRect().width > 0) { bar = bars[j]; break; }
+          }
+          if (bar) {
+            var rect = bar.getBoundingClientRect();
+              var cx = rect.left + (rect.width * (val / dur));
+              var cy = rect.top + (rect.height / 2);
+              var target = document.elementFromPoint(cx, cy) || bar;
+              
+              var evOpts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy, button: 0, buttons: 1 };
+              
+              if (typeof PointerEvent !== 'undefined') {
+                target.dispatchEvent(new PointerEvent('pointerdown', evOpts));
+                target.dispatchEvent(new PointerEvent('pointerup', evOpts));
+              }
+              target.dispatchEvent(new MouseEvent('mousedown', evOpts));
+              target.dispatchEvent(new MouseEvent('mouseup', evOpts));
+              target.dispatchEvent(new MouseEvent('click', evOpts));
+            }
+          }
+        }
+      return;
+    }
+    
     try {
       var els = Array.prototype.slice.call(document.querySelectorAll('video,audio'));
       var el = null;

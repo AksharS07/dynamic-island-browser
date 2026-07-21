@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dynamic Island V1.3 - What's New</title>
+  <title>Dynamic Island V1.4 - What's New</title>
   <link rel="icon" href="icon128.png" type="image/png">
   <style>
     body {
@@ -29,7 +29,7 @@
       font-weight: 700;
       margin-top: 0;
       margin-bottom: 8px;
-      background: linear-gradient(135deg, #fff, #888);
+      background: linear-gradient(135deg, #fff, #a78bfa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -39,24 +39,43 @@
       margin-bottom: 32px;
     }
     .feature {
+      display: flex;
+      gap: 14px;
       margin-bottom: 24px;
+      align-items: flex-start;
     }
-    .feature h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0 0 8px 0;
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      margin-top: 2px;
     }
-    .feature p {
+    .feature-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .icon-settings { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.2); }
+    .icon-settings svg { fill: #a78bfa; }
+    .icon-move { background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.2); }
+    .icon-move svg { fill: #60a5fa; }
+    .icon-hide { background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.2); }
+    .icon-hide svg { fill: #fbbf24; }
+    .icon-lyrics { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.2); }
+    .icon-lyrics svg { fill: #34d399; }
+    .feature-content h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+    }
+    .feature-content p {
       margin: 0;
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.5;
-      color: rgba(255, 255, 255, 0.7);
-    }
-    .icon {
-      font-size: 20px;
+      color: rgba(255, 255, 255, 0.55);
     }
     .btn {
       display: inline-block;
@@ -72,36 +91,57 @@
     .btn:hover {
       opacity: 0.8;
     }
+    .icon-spotify {
+      background: rgba(29, 185, 84, 0.1) !important;
+    }
+    .icon-spotify svg {
+      fill: #1DB954 !important;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Dynamic Island V1.3</h1>
-    <div class="subtitle">Here is what's new in the latest update!</div>
+    <h1>Dynamic Island V1.4</h1>
+    <div class="subtitle">The Spotify Update has arrived!</div>
 
     <div class="feature">
-      <h3>New Settings Menu</h3>
-      <p>Added a brand new settings menu accessible from the extension icon to easily toggle features and customize your experience.</p>
+      <div class="feature-icon icon-settings">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      </div>
+      <div class="feature-content">
+        <h3>Gapless Playback Fix</h3>
+        <p>Fixed a major bug on YouTube Music where gapless playback caused the lyrics and progress bar to violently jitter back and forth.</p>
+      </div>
     </div>
 
     <div class="feature">
-      <h3>Free Placement & Presets</h3>
-      <p>You can now freely move the island anywhere on your screen (enabled by default) or change its preset positions to snap it to the edges!</p>
+      <div class="feature-icon icon-move">
+        <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+      </div>
+      <div class="feature-content">
+        <h3>Drag & Drop Persistence</h3>
+        <p>Fixed an issue where free-dragged positions wouldn't save correctly when opening a new tab or reloading the page.</p>
+      </div>
     </div>
 
     <div class="feature">
-      <h3>Hide Island Option</h3>
-      <p>Need more space? You can temporarily hide the island. It will seamlessly appear back when you refresh the page or open a new tab.</p>
+      <div class="feature-icon icon-spotify">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.69 14.4c-.18.31-.58.4-.89.22-2.46-1.5-5.55-1.84-9.19-1.01-.35.08-.69-.14-.77-.49-.08-.35.14-.69.49-.77 4.02-.91 7.46-.51 10.15 1.13.31.18.41.58.21.89zm1.34-2.99c-.23.37-.7.49-1.07.26-2.81-1.73-7.1-2.25-10.43-1.23-.41.13-.85-.11-.98-.52-.13-.41.11-.85.52-.98 3.82-1.16 8.57-.59 11.71 1.34.36.23.48.71.25 1.13zm.12-3.15c-3.37-2-8.91-2.18-12.14-1.21-.49.15-.99-.13-1.14-.62-.15-.49.13-.99.62-1.14 3.73-1.12 9.87-.92 13.8 1.41.44.26.58.83.31 1.27-.26.44-.82.58-1.26.3z"/></svg>
+      </div>
+      <div class="feature-content">
+        <h3>Spotify Web Player Support</h3>
+        <p>The island now fully supports Spotify Web! It will extract track info, sync playback, and allow you to skip/pause songs seamlessly.</p>
+      </div>
     </div>
 
     <div class="feature">
-      <h3>Advanced Lyrics Engine</h3>
-      <p>We've added a multi-provider lyrics system to fetch lyrics faster, along with a sleek provider menu to swap sources on the fly.</p>
-    </div>
-
-    <div style="margin-top: 32px; padding: 16px 20px; background: rgba(255,255,255,0.04); border-left: 3px solid rgba(255,255,255,0.3); border-radius: 0 12px 12px 0; font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.6;">
-      <strong style="color: rgba(255,255,255,0.9);">🙌 A Special Thanks:</strong><br>
-      To <strong>Prathiksha V P</strong> and <strong>Bareerath</strong> for being among the first to test out the extension and provide invaluable feedback for this release. Thank you 🫶🏻
+      <div class="feature-icon icon-hide">
+        <svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+      </div>
+      <div class="feature-content">
+        <h3>File Minification</h3>
+        <p>The extension is now fully minified! We shrank the core file size by over 60% for snappier loading and better performance.</p>
+      </div>
     </div>
 
     <a href="#" id="close-btn" class="btn">Awesome, let's go!</a>

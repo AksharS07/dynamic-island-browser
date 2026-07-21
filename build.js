@@ -252,7 +252,7 @@ const { execSync } = require('child_process');
 function buildZip() {
   console.log('Building Extension ZIP...');
   const extDir = path.join(__dirname, 'chrome-extension');
-  const zipPath = path.join(__dirname, 'dynamic-island-extension-v1.3.zip');
+  const zipPath = path.join(__dirname, 'dynamic-island-extension-v1.4.zip');
   
   try {
     if (fs.existsSync(zipPath)) {
@@ -279,6 +279,17 @@ console.log('====================\n');
 buildVivaldi();
 buildChromeContent();
 buildChromeBackground();
+
+console.log('Minifying files using terser...');
+try {
+  execSync('npx terser dynamic-island.js -c -m -o dynamic-island.js', { cwd: __dirname });
+  execSync('npx terser chrome-extension/dynamic-island.js -c -m -o chrome-extension/dynamic-island.js', { cwd: __dirname });
+  execSync('npx terser chrome-extension/background.js -c -m -o chrome-extension/background.js', { cwd: __dirname });
+  console.log('  -> Minification successful!');
+} catch (e) {
+  console.error('  -> Minification failed. Proceeding without minification.', e.message);
+}
+
 buildZip();
 
 console.log('\nBuild complete!');

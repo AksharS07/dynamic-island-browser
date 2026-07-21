@@ -2,5 +2,8 @@
   "dependencies": {
     "jsdom": "^29.1.1",
     "sharp": "^0.35.2"
+  },
+  "devDependencies": {
+    "terser": "^5.49.0"
   }
 }
