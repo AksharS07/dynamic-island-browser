@@ -17,13 +17,13 @@ There are two versions:
 ## In Action 🎬
 
 ### Vivaldi — Native title bar mod
-https://github.com/AksharS07/dynamic-island-browser/raw/master/vivaldi-demo.mp4
+<video src="./vivaldi-demo.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px"></video>
 
 ### Chrome / Edge — Unpacked extension
-https://github.com/AksharS07/dynamic-island-browser/raw/master/edge-demo.mp4
+<video src="./edge-demo.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px"></video>
 
 ### Spotify Web Integration
-https://github.com/AksharS07/dynamic-island-browser/raw/master/spotify_demo.mp4
+<video src="./spotify_demo.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px"></video>
 
 ## Screenshots 📸
 
