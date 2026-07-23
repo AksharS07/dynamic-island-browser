@@ -204,6 +204,20 @@ VDI.Platform.ChromeExt = (function() {
           var args = msg.val !== undefined ? [msg.act, msg.val] : [msg.act];
           execInTab(S.tabId, VDI.Core.executeMediaAction, args, null);
 
+          // APPLE MUSIC CSP BYPASS: Inject directly into the MAIN world to hit MusicKit JS.
+          // This silently does nothing on Spotify/YouTube, but flawlessly controls Apple Music natively.
+          execInTab(S.tabId, function(act, val) {
+            if (window.location && window.location.hostname && window.location.hostname.includes('music.apple.com')) {
+              if (window.MusicKit && window.MusicKit.getInstance()) {
+                var m = window.MusicKit.getInstance();
+                if (act === 'toggle') { m.isPlaying ? m.pause() : m.play(); }
+                else if (act === 'prev') { m.skipToPreviousItem(); }
+                else if (act === 'next') { m.skipToNextItem(); }
+                else if (act === 'seek' && typeof val === 'number') { m.seekToTime(val); }
+              }
+            }
+          }, args, null, 'MAIN');
+
           // Rapid poll after actions
           multiPoll(poll, [200, 500, 1000]);
         }

@@ -422,6 +422,115 @@ VDI.Core = (function() {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Apple Music Media State Extractor (Isolated)
+  // ─────────────────────────────────────────────────────────────
+  function getAppleMusicMediaState() {
+    var parseTime = function(str) {
+      if (!str) return 0;
+      var p = str.trim().split(':').map(Number);
+      return p.length === 2 ? p[0] * 60 + p[1] : (p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : 0);
+    };
+
+    var deepQuery = function(selector, root) {
+      var results = [];
+      var traverse = function(node) {
+        var els = node.querySelectorAll(selector);
+        for (var i = 0; i < els.length; i++) results.push(els[i]);
+        var all = node.querySelectorAll('*');
+        for (var j = 0; j < all.length; j++) {
+          if (all[j].shadowRoot) traverse(all[j].shadowRoot);
+        }
+      };
+      traverse(root || document);
+      return results;
+    };
+
+    var ms = navigator.mediaSession;
+    var uiDur = 0;
+    var uiCur = 0;
+    
+    // Apple Music Web uses MusicKit JS which heavily utilizes Shadow DOMs.
+    var els = deepQuery('video, audio');
+    var realEl = null;
+
+    // Find the active element, ignoring short looping background videos
+    for (var k = 0; k < els.length; k++) {
+      var d = els[k].duration;
+      if (!els[k].paused && els[k].currentTime > 0 && (isNaN(d) || d === Infinity || d > 30)) {
+        realEl = els[k];
+        break;
+      }
+    }
+    if (!realEl && els.length > 0) {
+      for (var j = 0; j < els.length; j++) {
+        var d2 = els[j].duration;
+        if (isNaN(d2) || d2 === Infinity || d2 > 30) {
+          realEl = els[j];
+          break;
+        }
+      }
+      if (!realEl) realEl = els[0];
+    }
+
+    if (realEl) {
+      uiCur = realEl.currentTime >= 0 ? realEl.currentTime : 0;
+    }
+    
+    // Apple Music pads its HLS video durations, and ms.getPositionState is notoriously buggy on Apple Music Web.
+    // The ONLY source of truth is the visual time strings in the playback controls bar.
+    var playerBar = document.querySelector('#apple-music-player, .amp-playback-controls, apple-music-playback-controls, [role="region"][aria-label="Media Controls"], .web-chrome-playback-lcd') || document.body;
+    var timeEls = deepQuery('[class*="time"], [class*="duration"], [class*="current"], time', playerBar);
+    var times = [];
+    for (var i = 0; i < timeEls.length; i++) {
+      if (timeEls[i].getBoundingClientRect().width > 0) {
+        var tVal = parseTime(timeEls[i].textContent);
+        if (tVal > 0) times.push(tVal);
+      }
+    }
+    if (times.length > 0) {
+      times.sort(function(a, b) { return a - b; });
+      uiDur = times[times.length - 1]; // Largest is duration
+      if (!uiCur || uiCur === 0) {
+        uiCur = times.length >= 2 ? times[0] : (times[0] !== uiDur ? times[0] : 0);
+      }
+    }
+
+    if ((!uiDur || uiDur === 0) && realEl && isFinite(realEl.duration)) {
+      uiDur = realEl.duration;
+    }
+    if (!uiDur || uiDur === 0) {
+      if (ms && typeof ms.getPositionState === 'function') {
+        try {
+          var pState = ms.getPositionState();
+          if (pState && pState.duration > 0) uiDur = pState.duration;
+        } catch(e) {}
+      }
+    }
+
+    var isPlaying = realEl ? !realEl.paused : (ms && ms.playbackState === 'playing');
+    var art = null;
+    if (ms && ms.metadata && ms.metadata.artwork && ms.metadata.artwork.length) {
+      art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src;
+    }
+
+    return {
+      title: (ms && ms.metadata && ms.metadata.title) || document.title || '',
+      artist: (ms && ms.metadata && ms.metadata.artist) || '',
+      artwork: art,
+      isPlaying: isPlaying,
+      duration: uiDur,
+      position: uiCur,
+      hasMedia: !!((ms && ms.metadata && ms.metadata.title) || uiDur > 0),
+      volume: realEl ? realEl.volume : 1,
+      pipOk: false, // PiP is generally blocked or custom on Apple Music
+      isFullscreen: !!document.fullscreenElement,
+      isYouTubeVideo: false,
+      isMusicApp: true,
+      timestamp: Date.now()
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Spotify Media State Extractor (Isolated)
   // ─────────────────────────────────────────────────────────────
   function getSpotifyMediaState() {
@@ -506,6 +615,11 @@ VDI.Core = (function() {
   // Tab media state extraction (injected into content pages)
   // ─────────────────────────────────────────────────────────────
   function getTabMediaState() {
+    // 100% ISOLATION: Intercept Apple Music immediately
+    if (window.location.hostname.includes('music.apple.com')) {
+      return getAppleMusicMediaState();
+    }
+
     // 100% ISOLATION: Intercept Spotify immediately
     if (window.location.hostname.includes('spotify.com')) {
       return getSpotifyMediaState();
@@ -654,7 +768,119 @@ VDI.Core = (function() {
     }
     
     try {
-      var els = Array.prototype.slice.call(document.querySelectorAll('video,audio'));
+      var deepQuery = function(selector, root) {
+        var results = [];
+        var traverse = function(node) {
+          var els = node.querySelectorAll(selector);
+          for (var i = 0; i < els.length; i++) results.push(els[i]);
+          var all = node.querySelectorAll('*');
+          for (var j = 0; j < all.length; j++) {
+            if (all[j].shadowRoot) traverse(all[j].shadowRoot);
+          }
+        };
+        traverse(root || document);
+        return results;
+      };
+      var deepQueryOne = function(selector, root) {
+        var els = deepQuery(selector, root);
+        return els.length > 0 ? els[0] : null;
+      };
+
+      // 100% ISOLATION: Intercept Apple Music actions
+      if (window.location.hostname.includes('music.apple.com')) {
+        // Vivaldi Web Panel executes this in the MAIN world natively, so MusicKit is available!
+        if (window.MusicKit && window.MusicKit.getInstance()) {
+          var m = window.MusicKit.getInstance();
+          if (act === 'toggle') { m.isPlaying ? m.pause() : m.play(); return; }
+          else if (act === 'prev') { m.skipToPreviousItem(); return; }
+          else if (act === 'next') { m.skipToNextItem(); return; }
+          else if (act === 'seek' && typeof val === 'number') { m.seekToTime(val); return; }
+        }
+
+        if (act === 'toggle') {
+          var tb = deepQueryOne('button[aria-label*="Play"], button[aria-label*="Pause"], button[aria-label*="play"], button[aria-label*="pause"]');
+          if (tb) tb.click();
+        } else if (act === 'prev') {
+          var pb = deepQueryOne('button[aria-label*="Previous"], button[title*="Previous"], button[aria-label*="previous"]');
+          if (pb) pb.click();
+        } else if (act === 'next') {
+          var nb = deepQueryOne('button[aria-label*="Next"], button[title*="Next"], button[aria-label*="next"]');
+          if (nb) nb.click();
+        } else if (act === 'seek' && typeof val === 'number') {
+          var ms = navigator.mediaSession;
+          var dur = 0;
+          if (ms && typeof ms.getPositionState === 'function') {
+            try {
+              var pState = ms.getPositionState();
+              if (pState && pState.duration > 0) dur = pState.duration;
+            } catch(e) {}
+          }
+          // Fallback to our scoped UI duration if ms fails
+          if (!dur || dur === 0) {
+            var playerBar = document.querySelector('#apple-music-player, .amp-playback-controls, apple-music-playback-controls, [role="region"][aria-label="Media Controls"], .web-chrome-playback-lcd') || document.body;
+            var timeEls = deepQuery('[class*="time"], [class*="duration"], [class*="current"], time', playerBar);
+            var times = [];
+            for (var i = 0; i < timeEls.length; i++) {
+              if (timeEls[i].getBoundingClientRect().width > 0) {
+                var p = timeEls[i].textContent.trim().split(':').map(Number);
+                var tVal = p.length === 2 ? p[0] * 60 + p[1] : (p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : 0);
+                if (tVal > 0) times.push(tVal);
+              }
+            }
+            if (times.length > 0) {
+              times.sort(function(a, b) { return a - b; });
+              dur = times[times.length - 1]; 
+            }
+          }
+
+          if (dur > 0) {
+            // Find the progress bar (it will be the widest slider on the page)
+            var bars = deepQuery('input[type="range"], [role="slider"], [aria-label*="progress"], [aria-label*="time"], [class*="progress"]');
+            var bar = null;
+            var maxWidth = 0;
+            for (var j = 0; j < bars.length; j++) {
+              var rect = bars[j].getBoundingClientRect();
+              if (rect.width > maxWidth && rect.height > 0) { 
+                maxWidth = rect.width;
+                bar = bars[j]; 
+              }
+            }
+            if (bar) {
+              var br = bar.getBoundingClientRect();
+              var cx = br.left + (br.width * (val / dur));
+              var cy = br.top + (br.height / 2);
+              var target = document.elementFromPoint(cx, cy) || bar;
+              
+              var evOpts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy, button: 0, buttons: 1 };
+              if (typeof PointerEvent !== 'undefined') {
+                target.dispatchEvent(new PointerEvent('pointerdown', evOpts));
+                target.dispatchEvent(new PointerEvent('pointerup', evOpts));
+              }
+              target.dispatchEvent(new MouseEvent('mousedown', evOpts));
+              target.dispatchEvent(new MouseEvent('mouseup', evOpts));
+              target.dispatchEvent(new MouseEvent('click', evOpts));
+
+              // Force the underlying input to register the state change!
+              var inputEl = bar.tagName.toLowerCase() === 'input' ? bar : bar.querySelector('input[type="range"]');
+              if (inputEl) {
+                var pct = val / dur;
+                var max = parseFloat(inputEl.max) || 100;
+                try {
+                  var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nativeInputValueSetter.call(inputEl, pct * max);
+                } catch(e) {
+                  try { inputEl.value = pct * max; } catch(e2) {}
+                }
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      var els = deepQuery('video, audio');
       var el = null;
 
       // Find active element
@@ -675,9 +901,7 @@ VDI.Core = (function() {
       if (!el && els.length) el = els[0];
 
       if (act === 'toggle') {
-        var tb = document.querySelector('#play-pause-button') ||
-                 document.querySelector('.ytp-play-button') ||
-                 document.querySelector('.play-pause-button');
+        var tb = deepQueryOne('#play-pause-button, .ytp-play-button, .play-pause-button, button[aria-label="Play"], button[aria-label="Pause"], button[title="Play"], button[title="Pause"]');
         if (tb && typeof tb.click === 'function') {
           tb.click();
         } else if (el) {
@@ -686,23 +910,19 @@ VDI.Core = (function() {
         }
       } else if (act === 'prev') {
         if (el) {
-          var pb = document.querySelector('ytmusic-player-bar .previous-button') ||
-                   document.querySelector('.ytp-prev-button') ||
-                   document.querySelector('.previous-button');
+          var pb = deepQueryOne('ytmusic-player-bar .previous-button, .ytp-prev-button, .previous-button, button[aria-label="Previous"], button[title="Previous"]');
           if (pb) pb.click();
           else el.currentTime = 0;
         }
       } else if (act === 'next') {
         if (el) {
-          var nb = document.querySelector('ytmusic-player-bar .next-button') ||
-                   document.querySelector('.ytp-next-button') ||
-                   document.querySelector('.next-button');
+          var nb = deepQueryOne('ytmusic-player-bar .next-button, .ytp-next-button, .next-button, button[aria-label="Next"], button[title="Next"]');
           if (nb) nb.click();
           else el.currentTime = el.duration;
         }
       } else if (act === 'seek' && typeof val === 'number') {
         var isYTM = window.location.hostname === 'music.youtube.com';
-        var v = document.querySelectorAll('video');
+        var v = deepQuery('video, audio');
         var u = null;
         var uc = null;
 
