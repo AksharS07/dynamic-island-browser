@@ -118,7 +118,7 @@ This is what AI-assisted development actually looks like in practice. It is a lo
 
 - **Platform Support:** Currently optimized and actively tested for **Apple Music, YouTube, YouTube Music, and Spotify Web Player**. Native desktop apps (like the standalone Spotify PC client) cannot be supported due to strict browser extension sandbox rules.
 - **Fake Visualizer:** The EQ visualizer animates randomly rather than reacting to actual audio. There is no browser API that securely exposes raw audio waveform data from an arbitrary tab to an external script. 
-- **Lyrics Availability:** Depends entirely on lrclib.net's database. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. While translations are not provided, accurate romanization is fetched on-the-fly.
+- **Lyrics Availability:** Depends on the combined databases of lrclib.net and LyricsPlus. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. While translations are not provided, accurate romanization is fetched on-the-fly.
 - **Chromium Throttling:** When the media tab isn't focused, Chromium aggressively throttles its JavaScript, which can cause minor desyncs or lag when skipping tracks.
 - **Extension Restrictions:** The Chrome Extension cannot appear on `chrome://` internal pages, the new tab page, or heavily restricted Web Store pages due to browser security restrictions. It works on every normal webpage.
 - **Color Extraction:** Occasionally picks a muted color depending on album art composition, though this has been optimized.
