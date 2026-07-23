@@ -1,5 +1,5 @@
-# Dynamic Island for Browsers (V1.4) 
-*(Now supporting Spotify Web, YouTube, and YouTube Music)*
+# Dynamic Island for Browsers (V1.5) 
+*(Now supporting Apple Music, Spotify Web, YouTube, and YouTube Music)*
 
 **🎉 Now officially available on the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.2, V1.3 pending review)*
 
@@ -7,7 +7,7 @@
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
 </p>
 
-A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background. (Currently supports **Spotify Web**, **YouTube**, & **YouTube Music**).
+A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background. (Currently supports **Apple Music**, **Spotify Web**, **YouTube**, & **YouTube Music**).
 
 There are two versions:
 
@@ -33,6 +33,12 @@ There are two versions:
 </p>
 
 ---
+
+## What's New in V1.5 🚀
+
+- **Apple Music Sandbox Escape**: The island now fully supports `music.apple.com`! Apple Music is notoriously hostile to browser extensions, utilizing strict Content Security Policies and React synthetic event traps to block automated clicks. We engineered a native "Dual-World API Bypass" that punches a hole through Manifest V3, injecting our payloads directly into Apple's internal `MusicKit JS` engine to hijack control of their player seamlessly.
+- **Spotify Lyrics Sync Perfected**: Rewrote the Spotify lyrics tracking engine to completely ignore their 8-second looping Canvas videos, mathematically extracting true duration exclusively from the primary Widevine audio buffer.
+- **Dual-World Architecture Upgrade**: The entire core engine has been upgraded to support dual-world execution, allowing the island to instantly adapt its execution strategy based on the host website's security policies.
 
 ## What's New in V1.4 🚀
 
@@ -77,7 +83,7 @@ There are two versions:
 ## Steps to Download & Install
 
 ### Installing the Chrome / Edge Extension (Recommended):
-1. Download the latest **`dynamic-island-extension-v1.4.zip`** release file.
+1. Download the latest **`dynamic-island-extension-v1.5.zip`** release file.
 2. Extract the folder to a safe location on your computer.
 3. Open `chrome://extensions` (or `edge://extensions`).
 4. Enable **Developer Mode** using the toggle in the top right.
@@ -110,7 +116,7 @@ This is what AI-assisted development actually looks like in practice. It is a lo
 
 ## Known Limitations & Technical Challenges
 
-- **Platform Support:** Currently optimized and actively tested for **YouTube, YouTube Music, and Spotify Web Player**. Native desktop apps (like the standalone Spotify PC client) cannot be supported due to strict browser extension sandbox rules. Support for Apple Music Web is a work in progress.
+- **Platform Support:** Currently optimized and actively tested for **Apple Music, YouTube, YouTube Music, and Spotify Web Player**. Native desktop apps (like the standalone Spotify PC client) cannot be supported due to strict browser extension sandbox rules.
 - **Fake Visualizer:** The EQ visualizer animates randomly rather than reacting to actual audio. There is no browser API that securely exposes raw audio waveform data from an arbitrary tab to an external script. 
 - **Lyrics Availability:** Depends entirely on lrclib.net's database. Mainstream and regional tracks work surprisingly well; obscure tracks often do not. While translations are not provided, accurate romanization is fetched on-the-fly.
 - **Chromium Throttling:** When the media tab isn't focused, Chromium aggressively throttles its JavaScript, which can cause minor desyncs or lag when skipping tracks.

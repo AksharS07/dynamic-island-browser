@@ -1,6 +1,6 @@
 # Dynamic Island for Web
 
-A standalone Chrome Extension that brings an Apple-style Dynamic Island to every webpage, automatically syncing with background media tabs (like YouTube Music or YouTube).
+A standalone Chrome Extension that brings an Apple-style Dynamic Island to every webpage, automatically syncing with background media tabs (like Apple Music, Spotify, or YouTube).
 
 ## Installation
 
