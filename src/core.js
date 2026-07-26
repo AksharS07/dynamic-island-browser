@@ -901,7 +901,7 @@ VDI.Core = (function() {
       if (!el && els.length) el = els[0];
 
       if (act === 'toggle') {
-        var tb = deepQueryOne('#play-pause-button, .ytp-play-button, .play-pause-button, button[aria-label="Play"], button[aria-label="Pause"], button[title="Play"], button[title="Pause"]');
+        var tb = deepQueryOne('#play-pause-button, .ytp-play-button, .play-pause-button');
         if (tb && typeof tb.click === 'function') {
           tb.click();
         } else if (el) {
@@ -910,13 +910,13 @@ VDI.Core = (function() {
         }
       } else if (act === 'prev') {
         if (el) {
-          var pb = deepQueryOne('ytmusic-player-bar .previous-button, .ytp-prev-button, .previous-button, button[aria-label="Previous"], button[title="Previous"]');
+          var pb = deepQueryOne('ytmusic-player-bar .previous-button, .ytp-prev-button, .previous-button');
           if (pb) pb.click();
           else el.currentTime = 0;
         }
       } else if (act === 'next') {
         if (el) {
-          var nb = deepQueryOne('ytmusic-player-bar .next-button, .ytp-next-button, .next-button, button[aria-label="Next"], button[title="Next"]');
+          var nb = deepQueryOne('ytmusic-player-bar .next-button, .ytp-next-button, .next-button');
           if (nb) nb.click();
           else el.currentTime = el.duration;
         }
