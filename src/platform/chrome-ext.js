@@ -204,7 +204,7 @@ VDI.Platform.ChromeExt = (function() {
           var args = msg.val !== undefined ? [msg.act, msg.val] : [msg.act];
           execInTab(S.tabId, VDI.Core.executeMediaAction, args, null);
 
-          // APPLE MUSIC CSP BYPASS: Inject directly into the MAIN world to hit MusicKit JS.
+          // APPLE MUSIC: Inject into the MAIN world to access MusicKit JS (Apple's public SDK).
           // This silently does nothing on Spotify/YouTube, but flawlessly controls Apple Music natively.
           execInTab(S.tabId, function(act, val) {
             if (window.location && window.location.hostname && window.location.hostname.includes('music.apple.com')) {

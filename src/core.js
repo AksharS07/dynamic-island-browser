@@ -562,7 +562,7 @@ VDI.Core = (function() {
     
     var isPlaying = playBtn ? playBtn.getAttribute('aria-label') === 'Pause' : false;
 
-    // Spotify's UI string is often 1-3 seconds delayed due to DRM/MSE chunking buffers.
+    // Spotify's UI string is often 1-3 seconds delayed due to chunked media buffering.
     // To sync lyrics perfectly, we MUST extract millisecond precision from the true audio element.
     var realCur = null;
     var els = Array.prototype.slice.call(document.querySelectorAll('video, audio'));
