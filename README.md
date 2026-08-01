@@ -36,14 +36,14 @@ There are two versions:
 
 ## What's New in V1.5 🚀
 
-- **Apple Music Sandbox Escape**: The island now fully supports `music.apple.com`! Apple Music is notoriously hostile to browser extensions, utilizing strict Content Security Policies and React synthetic event traps to block automated clicks. We engineered a native "Dual-World API Bypass" that punches a hole through Manifest V3, injecting our payloads directly into Apple's internal `MusicKit JS` engine to hijack control of their player seamlessly.
-- **Spotify Lyrics Sync Perfected**: Rewrote the Spotify lyrics tracking engine to completely ignore their 8-second looping Canvas videos, mathematically extracting true duration exclusively from the primary Widevine audio buffer.
-- **Dual-World Architecture Upgrade**: The entire core engine has been upgraded to support dual-world execution, allowing the island to instantly adapt its execution strategy based on the host website's security policies.
+- **Apple Music Support**: The island now fully supports `music.apple.com`! Uses Apple's own public [MusicKit JS](https://developer.apple.com/musickit/) SDK — the official client-side JavaScript API that Apple ships on their web player — to read playback state and control the player natively through Manifest V3 content scripts.
+- **Spotify Lyrics Sync Perfected**: Rewrote the Spotify lyrics tracking engine to correctly identify the primary audio element and ignore short looping background Canvas videos, ensuring accurate duration and position tracking.
+- **Cross-Platform Architecture Upgrade**: The entire core engine has been upgraded to support multiple execution contexts using standard Manifest V3 content script APIs, allowing the island to adapt its interaction strategy for each supported music platform.
 
 ## What's New in V1.4 🚀
 
-- **Spotify Web Integration**: The island now fully supports `open.spotify.com`! It automatically extracts the current track, artist, album art, duration, and live time. You can also play, pause, and seek flawlessly using our custom robotic-mouse DOM manipulation.
-- **Deep-Media Timer Sync**: Solved severe timer desynchronization bugs caused by Spotify's DRM MSE chunking buffers and 8-second Canvas background videos. The Island now penetrates the DOM to extract true millisecond precision directly from the active audio tags while mathematically filtering out hidden looping visual elements.
+- **Spotify Web Integration**: The island now fully supports `open.spotify.com`! It reads the current track, artist, album art, duration, and playback position from Spotify's public DOM elements (data-testid attributes). Play, pause, and seek controls work by dispatching standard click events to Spotify's own UI buttons.
+- **Improved Timer Sync**: Solved timer desynchronization bugs caused by multiple `<audio>` and `<video>` elements on the page. The island now correctly identifies the primary media element by filtering out short looping background videos.
 - **Micro-Stutter Latency Fix**: Eradicated an issue where the background script's polling latency caused the Island's 60FPS UI progress bar to violently jitter back and forth. The Island now natively compensates for cross-process communication delays.
 - **Absolute Logic Isolation**: We rebuilt the core engine to strictly partition media platforms. This mathematically guarantees that the new Spotify integration will *never* interfere with or break our highly-tuned YouTube and YouTube Music logic!
 - **Gapless Playback Fix**: Fixed a major bug where YouTube Music's hidden gapless playback buffer caused the island's time tracking to desync and violently jitter. The 60FPS sync engine now smoothly bridges these buffer gaps.
@@ -60,7 +60,7 @@ There are two versions:
 ## What's New in V1.2 🚀
 
 - **Cinematic Lyrics:** Lyrics now feature a stunning, ultra-smooth full-line glow animation that naturally fades into focus instead of a harsh word-by-word sweep.
-- **Universal Picture-in-Picture:** Improved PiP integration instantly teleports you between tabs to flawlessly bypass browser security blocks across both Vivaldi and the standard extension! Pop out your video from any tab, anytime.
+- **Universal Picture-in-Picture:** Improved PiP integration that navigates between tabs to trigger the standard HTML5 `requestPictureInPicture()` API, then returns you to your original tab. Pop out your video from any tab, anytime.
 - **Zero Jitter Engine:** The playback progress bar is now mathematically smoothed to perfectly glide across your screen, completely eliminating rubber-banding and lag caused by background tab throttling.
 - **Smart Caching & Unified Tools:** Opening new tabs will now load lyrics instantly from memory! The lyrics panel also features a sleek, transparent floating Romanization toggle.
 
@@ -71,11 +71,11 @@ There are two versions:
 - **Media Playback Control:** Play, pause, skip, and scrub through tracks directly from the island. Double-click the island to jump directly to the media tab.
 - **Time-Synced Lyrics & Romanization:** Fetches beautifully animated, time-synced lyrics in their original language. For non-Latin scripts (Japanese, Korean, Chinese, etc.), click the floating orb to silently query the Google Translate API and instantly provide highly accurate Romanization underneath! Click any lyric line to instantly seek to that part of the song.
 - **Instrumental Progress Bar:** During instrumental sections (♪/♫), the lyrics panel displays a buttery-smooth music note that fills up seamlessly like a progress bar, perfectly synced to the duration of the instrumental break.
-- **High-Res Artwork Injection:** Automatically cross-references YouTube and Spotify tracks with the Apple Music API to fetch crisp, high-resolution album art!
+- **High-Res Artwork Fetching:** Automatically cross-references YouTube and Spotify tracks with the public iTunes Search API to fetch crisp, high-resolution album art!
 - **In-App Settings Panel:** A sleek glassmorphic settings menu accessible directly from a gear icon on the island. Toggle features like Lyrics Engine, Free Placement, and blacklist specific sites (like YouTube or YouTube Music) on the fly. It also includes 4 instant Snap Preset buttons to park the island neatly on the edges of your screen. All settings sync via Local Storage.
 - **Auto-Collapse & Idle State:** Expands on hover to show album art and controls. When inactive, it automatically shrinks into a tiny, unobtrusive dot so it stays completely out of your way.
 - **Context-Aware PiP:** Includes a Picture-in-Picture (PiP) button. On standard YouTube videos, the lyrics icon intelligently hides itself to give priority to the PiP button. 
-- **Universal PiP Teleportation Hack:** Because standard browser extensions and mods operate under strict cross-origin security rules, Chromium natively blocks programmatic PiP requests from different tabs. The island uses a custom "Teleportation Hack" that instantly teleports you to the video tab, triggers PiP, and seamlessly teleports you right back!
+- **Cross-Tab PiP:** Because Chromium requires a user gesture on the same tab to trigger PiP, the island briefly switches to the media tab, requests PiP via the standard HTML5 API, and then switches back to your original tab — all within milliseconds.
 - **Vibrant Theming:** Automatically extracts the dominant color from the album art and seamlessly themes the entire island—background, glow, accent, and progress bar—to match perfectly.
 
 ---
@@ -108,7 +108,7 @@ No build step, no dependencies, no account required.
 
 I am a 2nd-year CS/IoT/Cybersecurity engineering student. I do not enjoy frontend development. I did not write the HTML, CSS, or JS syntax for this project — that was handled by agentic AI (Google's Antigravity 2.0 and Claude).
 
-What I did do: defined the product, made every architectural decision, and acted as QA throughout. I caught bugs the AI missed repeatedly — a silent `ReferenceError` that was killing color theming entirely, a JavaScript closure bug that bound every lyrics click listener to the last line instead of the correct one, an infinite loop in the Apple Music API fetcher that brought the browser to its knees, and Chromium's strict User Gesture requirements that completely blocked PiP in Vivaldi until we engineered the "Teleportation Hack". The AI generated code; I decided what the code was supposed to do and whether it actually did it.
+What I did do: defined the product, made every architectural decision, and acted as QA throughout. I caught bugs the AI missed repeatedly — a silent `ReferenceError` that was killing color theming entirely, a JavaScript closure bug that bound every lyrics click listener to the last line instead of the correct one, an infinite loop in the Apple Music metadata fetcher, and Chromium's strict User Gesture requirements that required a cross-tab navigation approach for PiP. The AI generated code; I decided what the code was supposed to do and whether it actually did it.
 
 This is what AI-assisted development actually looks like in practice. It is a lot of iterative debugging and knowing when the output is wrong.
 
