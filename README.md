@@ -1,7 +1,7 @@
 # Dynamic Island for Browsers (V1.5) 
 *(Now supporting Apple Music, Spotify Web, YouTube, and YouTube Music)*
 
-**🎉 Now officially available on the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.2, V1.3 pending review)*
+**🎉 Now officially available on the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.3, V1.5 pending review)*
 
 <p align="center">
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
