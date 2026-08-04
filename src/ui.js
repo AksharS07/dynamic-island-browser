@@ -914,6 +914,13 @@ VDI.UI = (function() {
         platform.jumpToTab(state.tabId, state.windowId);
       });
 
+      if ($('vdi-col-btn')) {
+        $('vdi-col-btn').addEventListener('click', function(e) {
+          e.stopPropagation();
+          platform.sendAction(state.tabId, 'toggle');
+        });
+      }
+
       // Controls
       $('vdi-prev').addEventListener('click', function(e) {
         e.stopPropagation();
