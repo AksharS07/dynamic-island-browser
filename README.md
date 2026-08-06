@@ -1,7 +1,13 @@
 # Dynamic Island for Browsers (V1.5) 
 *(Cross-Browser Extension)*
 
-**🎉 Now officially available on the [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/) and [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.3, V1.5 pending review)*
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/"><img src="https://addons.mozilla.org/static/img/addons-buttons/AMO-button_1.png" width="170" alt="Get the Add-on for Firefox"></a>
+  &nbsp;&nbsp;
+  <a href="https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk"><img src="https://developer.microsoft.com/en-us/store/badges/images/English_get-it-from-MS.png" width="170" alt="Get it from Microsoft Edge"></a>
+</p>
+
+*(Currently V1.3, V1.5 pending review)*
 
 <p align="center">
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
