@@ -1,5 +1,5 @@
 # Dynamic Island for Browsers (V1.5) 
-*(Cross-Browser Extension & Vivaldi Mod)*
+*(Cross-Browser Extension)*
 
 **🎉 Now officially available on the [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/) and [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.3, V1.5 pending review)*
 
@@ -9,17 +9,11 @@
 
 A beautifully animated, Apple-style Dynamic Island that lives natively in your browser. It supports Spotify Web, Apple Music, YouTube, & YouTube Music with a 60FPS Deep-Media Timer engine, Universal Picture-in-Picture teleportation, and live time-synced lyrics.
 
-There are two versions:
-
-- **Vivaldi Mod** — lives natively in Vivaldi's title bar, works across every tab including settings and new tab pages. Looks and feels like it belongs there.
-- **Cross-Browser Extension** — works on Firefox, Chrome, Edge, Brave, or any modern browser. Sits as a fixed overlay at the top of every webpage. Less native-looking, but anyone can install it in 30 seconds without touching their browser's internals.
+Works on Firefox, Chrome, Edge, Brave, or any modern Chromium browser. Sits as a fixed overlay at the top of every webpage. Anyone can install it in 30 seconds without touching their browser's internals.
 
 ## In Action 🎬
 
-### Vivaldi — Native title bar mod
-![Vivaldi Demo](vivaldi-demo.gif)
-
-### Chrome / Edge — Unpacked extension
+### Chrome / Edge / Firefox Extension
 ![Edge Demo](edge-demo.gif)
 
 ### Spotify Web Integration
@@ -91,17 +85,6 @@ There are two versions:
 
 No build step, no dependencies, no account required.
 
-### For Vivaldi Native Mod (Advanced):
-1. Close Vivaldi completely.
-2. Clone or download the **source code / repository**.
-3. Open the `vivaldi-scripts` folder.
-4. Right-click `UPDATE (Run as Admin).bat` and select **Run as Administrator**.
-5. The script will automatically find your Vivaldi installation, inject the Dynamic Island (`dynamic-island.js`), and relaunch the browser for you.
-
-*(Note: You will need to re-run this script after any major Vivaldi version updates, as they overwrite core browser files).*
-
-**To Uninstall:** Simply run `DISABLE (Run as Admin).bat` to instantly strip the mod from Vivaldi's core files and return the browser to normal.
-
 ---
 
 ## How this was actually built
@@ -135,8 +118,7 @@ src/
   styles.js         # CSS generation with configurability
   ui.js             # DOM creation and controller logic
   platform/
-    vivaldi.js      # Vivaldi-specific APIs
-    chrome-ext.js   # Chrome Extension messaging
+    chrome-ext.js   # Extension messaging
 ```
 
 Run `node build.js` to regenerate the output files and the release `.zip` archive. No bundler required.

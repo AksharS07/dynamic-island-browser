@@ -276,13 +276,13 @@ function buildZip() {
 console.log('Dynamic Island Build');
 console.log('====================\n');
 
-buildVivaldi();
+// buildVivaldi();
 buildChromeContent();
 buildChromeBackground();
 
 console.log('Minifying files using terser...');
 try {
-  execSync('npx terser dynamic-island.js -c -m -o dynamic-island.js', { cwd: __dirname });
+  // execSync('npx terser dynamic-island.js -c -m -o dynamic-island.js', { cwd: __dirname });
   execSync('npx terser chrome-extension/dynamic-island.js -c -m -o chrome-extension/dynamic-island.js', { cwd: __dirname });
   execSync('npx terser chrome-extension/background.js -c -m -o chrome-extension/background.js', { cwd: __dirname });
   console.log('  -> Minification successful!');
