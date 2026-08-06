@@ -19,13 +19,13 @@ Works on Firefox, Chrome, Edge, Brave, or any modern Chromium browser. Sits as a
 
 ## In Action 🎬
 
-### Chrome / Edge / Firefox Extension
+### YouTube & YouTube Music in Edge
 ![Edge Demo](edge-demo.gif)
 
-### Spotify Web Integration
+### Spotify in Vivaldi
 ![Spotify Demo](spotify_demo.gif)
 
-### Apple Music Integration
+### Apple Music in Firefox
 ![Apple Music Demo](apple_music_demo.gif)
 
 ## Screenshots 📸
