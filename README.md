@@ -2,9 +2,9 @@
 *(Cross-Browser Extension)*
 
 <p align="center">
-  <a href="https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/"><img src="https://addons.mozilla.org/static/img/addons-buttons/AMO-button_1.png" width="170" alt="Get the Add-on for Firefox"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/"><img src="https://img.shields.io/badge/Firefox-Get_the_Add--on-FF7139?style=for-the-badge&logo=Firefox-Browser&logoColor=white" alt="Get the Add-on for Firefox"></a>
   &nbsp;&nbsp;
-  <a href="https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk"><img src="https://developer.microsoft.com/en-us/store/badges/images/English_get-it-from-MS.png" width="170" alt="Get it from Microsoft Edge"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk"><img src="https://img.shields.io/badge/Edge-Get_it_from_Microsoft_Edge-0078D7?style=for-the-badge&logo=Microsoft-Edge&logoColor=white" alt="Get it from Microsoft Edge"></a>
 </p>
 
 *(Currently V1.3, V1.5 pending review)*
