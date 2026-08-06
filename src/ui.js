@@ -1305,14 +1305,14 @@ VDI.UI = (function() {
         updateSettingsPanelPosition();
       });
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['vdi_loc_x', 'vdi_loc_y', 'vdi_transform', 'vdi_cfg_hideYouTube', 'vdi_cfg_hideYouTubeMusic', 'vdi_cfg_hideSpotify', 'vdi_cfg_hideAppleMusic', 'vdi_cfg_enableLyrics', 'vdi_cfg_freePlacement', 'vdi_cfg_seenTooltip3'], function(res) {
+        chrome.storage.local.get(['vdi_loc_x', 'vdi_loc_y', 'vdi_transform', 'hideYouTube', 'hideYouTubeMusic', 'hideSpotify', 'hideAppleMusic', 'enableLyrics', 'freePlacement', 'vdi_cfg_seenTooltip3'], function(res) {
           applyPos(res.vdi_loc_x, res.vdi_loc_y, res.vdi_transform);
-          if (res.vdi_cfg_hideYouTube !== undefined) settings.hideYouTube = res.vdi_cfg_hideYouTube;
-          if (res.vdi_cfg_hideYouTubeMusic !== undefined) settings.hideYouTubeMusic = res.vdi_cfg_hideYouTubeMusic;
-          if (res.vdi_cfg_hideSpotify !== undefined) settings.hideSpotify = res.vdi_cfg_hideSpotify;
-          if (res.vdi_cfg_hideAppleMusic !== undefined) settings.hideAppleMusic = res.vdi_cfg_hideAppleMusic;
-          if (res.vdi_cfg_enableLyrics !== undefined) settings.enableLyrics = res.vdi_cfg_enableLyrics;
-          if (res.vdi_cfg_freePlacement !== undefined) settings.freePlacement = res.vdi_cfg_freePlacement;
+          if (res.hideYouTube !== undefined) settings.hideYouTube = res.hideYouTube;
+          if (res.hideYouTubeMusic !== undefined) settings.hideYouTubeMusic = res.hideYouTubeMusic;
+          if (res.hideSpotify !== undefined) settings.hideSpotify = res.hideSpotify;
+          if (res.hideAppleMusic !== undefined) settings.hideAppleMusic = res.hideAppleMusic;
+          if (res.enableLyrics !== undefined) settings.enableLyrics = res.enableLyrics;
+          if (res.freePlacement !== undefined) settings.freePlacement = res.freePlacement;
           if (res.vdi_cfg_seenTooltip3 !== undefined) settings.seenTooltip = res.vdi_cfg_seenTooltip3;
 
           $('vdi-stg-hideyt').checked = settings.hideYouTube;
@@ -1325,12 +1325,12 @@ VDI.UI = (function() {
 
         chrome.storage.onChanged.addListener(function(changes, namespace) {
           if (namespace === 'local') {
-            if (changes.vdi_cfg_hideYouTube) settings.hideYouTube = changes.vdi_cfg_hideYouTube.newValue;
-            if (changes.vdi_cfg_hideYouTubeMusic) settings.hideYouTubeMusic = changes.vdi_cfg_hideYouTubeMusic.newValue;
-            if (changes.vdi_cfg_hideSpotify) settings.hideSpotify = changes.vdi_cfg_hideSpotify.newValue;
-            if (changes.vdi_cfg_hideAppleMusic) settings.hideAppleMusic = changes.vdi_cfg_hideAppleMusic.newValue;
-            if (changes.vdi_cfg_enableLyrics) settings.enableLyrics = changes.vdi_cfg_enableLyrics.newValue;
-            if (changes.vdi_cfg_freePlacement) settings.freePlacement = changes.vdi_cfg_freePlacement.newValue;
+            if (changes.hideYouTube) settings.hideYouTube = changes.hideYouTube.newValue;
+            if (changes.hideYouTubeMusic) settings.hideYouTubeMusic = changes.hideYouTubeMusic.newValue;
+            if (changes.hideSpotify) settings.hideSpotify = changes.hideSpotify.newValue;
+            if (changes.hideAppleMusic) settings.hideAppleMusic = changes.hideAppleMusic.newValue;
+            if (changes.enableLyrics) settings.enableLyrics = changes.enableLyrics.newValue;
+            if (changes.freePlacement) settings.freePlacement = changes.freePlacement.newValue;
             updateUI();
           }
         });

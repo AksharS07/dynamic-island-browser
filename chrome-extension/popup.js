@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   const tglYouTube = document.getElementById('hideYouTube');
   const tglYouTubeMusic = document.getElementById('hideYouTubeMusic');
+  const tglSpotify = document.getElementById('hideSpotify');
+  const tglAppleMusic = document.getElementById('hideAppleMusic');
   const tglLyrics = document.getElementById('enableLyrics');
   const tglFree = document.getElementById('freePlacement');
   const tglPreset = document.getElementById('presetPlacement');
@@ -20,6 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
   chrome.storage.local.get({
     hideYouTube: true,
     hideYouTubeMusic: false,
+    hideSpotify: false,
+    hideAppleMusic: false,
     enableLyrics: true,
     freePlacement: true,
     presetPlacement: false,
@@ -27,6 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }, function(res) {
     tglYouTube.checked = res.hideYouTube;
     tglYouTubeMusic.checked = res.hideYouTubeMusic;
+    tglSpotify.checked = res.hideSpotify;
+    tglAppleMusic.checked = res.hideAppleMusic;
     tglLyrics.checked = res.enableLyrics;
     tglFree.checked = res.freePlacement;
     tglPreset.checked = res.presetPlacement;
@@ -39,6 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.storage.local.set({
       hideYouTube: tglYouTube.checked,
       hideYouTubeMusic: tglYouTubeMusic.checked,
+      hideSpotify: tglSpotify.checked,
+      hideAppleMusic: tglAppleMusic.checked,
       enableLyrics: tglLyrics.checked,
       freePlacement: tglFree.checked,
       presetPlacement: tglPreset.checked
@@ -47,6 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   tglYouTube.addEventListener('change', saveSettings);
   tglYouTubeMusic.addEventListener('change', saveSettings);
+  tglSpotify.addEventListener('change', saveSettings);
+  tglAppleMusic.addEventListener('change', saveSettings);
   tglLyrics.addEventListener('change', saveSettings);
 
   tglFree.addEventListener('change', function() {
