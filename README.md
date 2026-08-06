@@ -25,6 +25,9 @@ Works on Firefox, Chrome, Edge, Brave, or any modern Chromium browser. Sits as a
 ### Spotify Web Integration
 ![Spotify Demo](spotify_demo.gif)
 
+### Apple Music Integration
+![Apple Music Demo](apple_music_demo.gif)
+
 ## Screenshots 📸
 
 <p align="center">
