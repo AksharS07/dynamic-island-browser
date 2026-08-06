@@ -513,14 +513,33 @@ VDI.Core = (function() {
       art = ms.metadata.artwork[ms.metadata.artwork.length - 1].src;
     }
 
+    var titleEls = deepQuery('.web-chrome-playback-lcd__song-name-scroll, [data-testid="track-title"], .ticker-item, [class*="song-name"]', playerBar);
+    var artistEls = deepQuery('.web-chrome-playback-lcd__sub-info-scroll, [data-testid="track-artist"], [class*="artist-name"]', playerBar);
+    
+    var domTitle = titleEls.length > 0 ? titleEls[0].textContent.trim() : '';
+    var domArtist = artistEls.length > 0 ? artistEls[0].textContent.trim() : '';
+    
+    var finalTitle = (ms && ms.metadata && ms.metadata.title) || domTitle || '';
+    var finalArtist = (ms && ms.metadata && ms.metadata.artist) || domArtist || '';
+    
+    if (!finalTitle && document.title) {
+      var parts = document.title.split(' - ');
+      if (parts.length >= 2) {
+        finalTitle = parts[0].trim();
+        if (!finalArtist) finalArtist = parts[1].trim();
+      } else {
+        finalTitle = document.title.replace(' - Apple Music', '').trim();
+      }
+    }
+
     return {
-      title: (ms && ms.metadata && ms.metadata.title) || document.title || '',
-      artist: (ms && ms.metadata && ms.metadata.artist) || '',
+      title: finalTitle,
+      artist: finalArtist,
       artwork: art,
       isPlaying: isPlaying,
       duration: uiDur,
       position: uiCur,
-      hasMedia: !!((ms && ms.metadata && ms.metadata.title) || uiDur > 0),
+      hasMedia: !!(finalTitle || uiDur > 0),
       volume: realEl ? realEl.volume : 1,
       pipOk: false, // PiP is generally blocked or custom on Apple Music
       isFullscreen: !!document.fullscreenElement,

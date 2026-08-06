@@ -98,8 +98,8 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const p = presets[id];
       chrome.storage.local.set({
-        vdi_pos_x: p.x,
-        vdi_pos_y: p.y,
+        vdi_loc_x: p.x,
+        vdi_loc_y: p.y,
         vdi_transform: p.transform,
         activePreset: id
       });

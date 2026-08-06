@@ -226,6 +226,16 @@ VDI.Platform.ChromeExt = (function() {
         if (msg.source.winId) chrome.windows.update(msg.source.winId, { focused: true });
       } else if (msg.type === 'VDI_REQUEST_STATE') {
         sendResponse(S);
+      } else if (msg.type === 'VDI_FETCH_LYRICS') {
+        VDI.Core.fetchLyrics(msg.title, msg.artist, msg.duration, function(result) {
+          sendResponse(result);
+        });
+        return true; // Keep message channel open for async response
+      } else if (msg.type === 'VDI_BATCH_ROMANIZE') {
+        VDI.Core.batchRomanize(msg.lines, function(result) {
+          sendResponse(result);
+        });
+        return true;
       }
     }
 

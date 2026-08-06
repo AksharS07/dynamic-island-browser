@@ -441,7 +441,7 @@ VDI.UI = (function() {
         }
       } catch(e) {}
 
-      VDI.Core.fetchLyrics(state.title, state.artist, state.duration, function(result) {
+      var handleFetchResult = function(result) {
         if (result) {
           try {
             localStorage.setItem('vdi_lyr_multi_' + key, JSON.stringify({ 
@@ -451,7 +451,18 @@ VDI.UI = (function() {
           } catch (e) {}
         }
         handleMultiResult(result, key);
-      });
+      };
+
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({
+          type: 'VDI_FETCH_LYRICS',
+          title: state.title,
+          artist: state.artist,
+          duration: state.duration
+        }, handleFetchResult);
+      } else {
+        VDI.Core.fetchLyrics(state.title, state.artist, state.duration, handleFetchResult);
+      }
     }
 
     window.vdiSwitchProvider = function(prov) {
@@ -573,7 +584,7 @@ VDI.UI = (function() {
 
         // Async fetch romanization if needed
         if (anyNonLatin && VDI.Core.batchRomanize) {
-          VDI.Core.batchRomanize(lines, function(roms) {
+          var handleRomanizeResult = function(roms) {
             if (key !== state.lastLyricsKey) return;
             for (var r = 0; r < roms.length; r++) {
               var romText = roms[r];
@@ -593,7 +604,16 @@ VDI.UI = (function() {
                 }
               }
             }
-          });
+          };
+
+          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+            chrome.runtime.sendMessage({
+              type: 'VDI_BATCH_ROMANIZE',
+              lines: lines
+            }, handleRomanizeResult);
+          } else {
+            VDI.Core.batchRomanize(lines, handleRomanizeResult);
+          }
         }
 
         // Show/hide romanize toggle
@@ -1331,6 +1351,11 @@ VDI.UI = (function() {
             if (changes.hideAppleMusic) settings.hideAppleMusic = changes.hideAppleMusic.newValue;
             if (changes.enableLyrics) settings.enableLyrics = changes.enableLyrics.newValue;
             if (changes.freePlacement) settings.freePlacement = changes.freePlacement.newValue;
+            
+            if (changes.vdi_loc_x && changes.vdi_loc_y && changes.vdi_transform) {
+              applyPos(changes.vdi_loc_x.newValue, changes.vdi_loc_y.newValue, changes.vdi_transform.newValue);
+            }
+            
             updateUI();
           }
         });

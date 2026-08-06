@@ -1,18 +1,18 @@
 # Dynamic Island for Browsers (V1.5) 
-*(Now supporting Apple Music, Spotify Web, YouTube, and YouTube Music)*
+*(Cross-Browser Extension & Vivaldi Mod)*
 
-**🎉 Now officially available on the [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.3, V1.5 pending review)*
+**🎉 Now officially available on the [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/) and [Microsoft Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/jhglafdjkeohejcgfdmcfhenniahjgpk)!** *(Currently V1.3, V1.5 pending review)*
 
 <p align="center">
   <img src="final_large_promo.jpg" alt="Dynamic Island Promo Logo" width="100%">
 </p>
 
-A browser mod (and Chrome Extension) that brings an Apple-style Dynamic Island to your desktop browser, syncing with whatever media tab is playing in the background. (Currently supports **Apple Music**, **Spotify Web**, **YouTube**, & **YouTube Music**).
+A beautifully animated, Apple-style Dynamic Island that lives natively in your browser. It supports Spotify Web, Apple Music, YouTube, & YouTube Music with a 60FPS Deep-Media Timer engine, Universal Picture-in-Picture teleportation, and live time-synced lyrics.
 
 There are two versions:
 
 - **Vivaldi Mod** — lives natively in Vivaldi's title bar, works across every tab including settings and new tab pages. Looks and feels like it belongs there.
-- **Chrome Extension** — works on Chrome, Edge, Brave, or any Chromium browser. Sits as a fixed overlay at the top of every webpage. Less native-looking, but anyone can install it in 30 seconds without touching their browser's internals.
+- **Cross-Browser Extension** — works on Firefox, Chrome, Edge, Brave, or any modern browser. Sits as a fixed overlay at the top of every webpage. Less native-looking, but anyone can install it in 30 seconds without touching their browser's internals.
 
 ## In Action 🎬
 
@@ -82,7 +82,7 @@ There are two versions:
 
 ## Steps to Download & Install
 
-### Installing the Chrome / Edge Extension (Recommended):
+### Installing the Cross-Browser Extension (Recommended):
 1. Download the latest **`dynamic-island-extension-v1.5.zip`** release file.
 2. Extract the folder to a safe location on your computer.
 3. Open `chrome://extensions` (or `edge://extensions`).
