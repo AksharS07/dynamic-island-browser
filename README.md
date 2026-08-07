@@ -1,5 +1,5 @@
-# Dynamic Island for Browsers (V1.5) 
-*(Cross-Browser Extension)*
+# Dynamic Island for Web Browsers (V1.5) 
+
 
 <p align="center">
   <a href="https://addons.mozilla.org/en-US/firefox/addon/dynamic-island-for-web/"><img src="https://img.shields.io/badge/Firefox-Get_the_Add--on-FF7139?style=for-the-badge&logo=Firefox-Browser&logoColor=white" alt="Get the Add-on for Firefox"></a>
